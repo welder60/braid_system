@@ -34,6 +34,10 @@ def gestao(request):
     return render(request, 'core/gestao.html')
 
 
+def perfil(request):
+    return render(request, 'core/perfil.html')
+
+
 def admin_painel(request):
     return render(request, 'core/admin_painel.html')
 

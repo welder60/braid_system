@@ -6,6 +6,7 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('gestao/', views.gestao, name='gestao'),
+    path('perfil/', views.perfil, name='perfil'),
     path('estabelecimentos/novo/', views.cadastro_estabelecimento, name='cadastro_estabelecimento'),
 
     # Estabelecimentos (admin CRUD)

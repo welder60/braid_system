@@ -56,6 +56,31 @@
       letter-spacing: 0.05em;
       text-transform: uppercase;
     }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .header-greeting {
+      font-size: 0.85rem;
+      color: rgba(231,218,193,0.7);
+    }
+    .btn-perfil {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.825rem;
+      color: var(--color-sand);
+      text-decoration: none;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid rgba(231,218,193,0.3);
+      border-radius: 6px;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    .btn-perfil:hover {
+      background: rgba(231,218,193,0.1);
+      border-color: rgba(231,218,193,0.6);
+    }
 
     /* ── Layout ── */
     .layout {
@@ -208,6 +233,15 @@
       </svg>
       <h1>Braid System</h1>
       <span class="badge">Admin</span>
+    </div>
+    <div class="header-right">
+      {% if user.is_authenticated %}
+        <span class="header-greeting">Olá, {{ user.nome }}</span>
+        <a href="{% url 'perfil' %}" class="btn-perfil">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          Perfil
+        </a>
+      {% endif %}
     </div>
   </header>
 
