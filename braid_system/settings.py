@@ -120,3 +120,6 @@ STATIC_URL = 'static/'
 # Media files (uploads de usuário)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Auth
+AUTH_USER_MODEL = 'core.Usuario'
