@@ -367,6 +367,29 @@
     }
     .cat-card-icon img { width: 28px; height: 28px; object-fit: cover; border-radius: 6px; }
     .cat-card-nome { font-size: 0.72rem; font-weight: 600; color: var(--color-forest); line-height: 1.2; }
+    .cat-card.has-children { position: relative; }
+    .cat-card.has-children::after {
+      content: '›';
+      position: absolute;
+      top: 5px; right: 7px;
+      font-size: 0.8rem;
+      color: rgba(30,42,31,0.3);
+      line-height: 1;
+    }
+
+    /* Breadcrumb de navegação dentro do passo 1 */
+    .cat-nav-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.6rem;
+    }
+    .cat-nav-back {
+      border: none; background: none; cursor: pointer;
+      color: var(--color-earth); padding: 0.2rem;
+      display: flex; align-items: center;
+    }
+    .cat-nav-title { font-size: 0.8rem; font-weight: 700; color: var(--color-forest); }
 
     /* Sem estabelecimento */
     .no-est { text-align: center; padding: 3rem 1rem; color: rgba(30,42,31,0.5); }
@@ -536,28 +559,17 @@
         <input type="hidden" name="mes" value="{{ mes_ativo }}">
         <input type="hidden" name="ano" value="{{ ano_ativo }}">
 
-        <!-- Passo 1: Categoria (cards) -->
+        <!-- Passo 1: Categoria (cards com drill-down hierárquico) -->
         <div class="wizard-panel active" id="wpanel1">
-          <p class="step-hint">Passo 1 de 3 — Selecione a categoria</p>
           <input type="hidden" id="wCategoria" name="categoria_custo">
-          <div class="cat-grid" id="catGrid">
-            {% for cat in categorias %}
-              <button type="button" class="cat-card" data-pk="{{ cat.pk }}" onclick="selecionarCategoria(this)">
-                <span class="cat-card-icon">
-                  {% if cat.ilustracao %}
-                    {% if cat.ilustracao|slice:":1" == "/" or cat.ilustracao|slice:":4" == "http" %}
-                      <img src="{{ cat.ilustracao }}" alt="">
-                    {% else %}
-                      {{ cat.ilustracao }}
-                    {% endif %}
-                  {% else %}
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  {% endif %}
-                </span>
-                <span class="cat-card-nome">{{ cat.nome }}</span>
-              </button>
-            {% endfor %}
+          <div class="cat-nav-header" id="catNavHeader" style="display:none">
+            <button type="button" class="cat-nav-back" id="catNavBack" onclick="catVoltar()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <span class="cat-nav-title" id="catNavTitle"></span>
           </div>
+          <p class="step-hint" id="catHint">Selecione a categoria</p>
+          <div class="cat-grid" id="catGrid"></div>
           <div class="wizard-footer" style="margin-top:1rem">
             <button type="button" class="btn-wizard-back" onclick="fecharWizard()">Cancelar</button>
             <button type="button" class="btn-wizard-next" id="btnStep1" onclick="wizardProximo()" disabled>Próximo →</button>
@@ -661,11 +673,78 @@
       wizardStep = n;
     }
 
-    function selecionarCategoria(el) {
-      document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
-      el.classList.add('selected');
-      document.getElementById('wCategoria').value = el.dataset.pk;
-      document.getElementById('btnStep1').disabled = false;
+    // --- Dados hierárquicos de categorias ---
+    const catData = [
+      {% for cat in categorias %}
+      {
+        pk: "{{ cat.pk }}",
+        nome: "{{ cat.nome|escapejs }}",
+        ilustracao: "{{ cat.ilustracao|escapejs }}",
+        pai: "{{ cat.nivel_superior_id|default:'' }}"
+      }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    // Monta mapa pk → categoria e pk → filhos
+    const catMap = {};
+    catData.forEach(c => { catMap[c.pk] = c; c.filhos = []; });
+    catData.forEach(c => { if (c.pai && catMap[c.pai]) catMap[c.pai].filhos.push(c); });
+    const catRaizes = catData.filter(c => !c.pai);
+
+    let catStack = []; // pilha de navegação: [{pk, nome}]
+
+    function catIconHTML(cat) {
+      if (!cat.ilustracao) return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+      if (cat.ilustracao.startsWith('/') || cat.ilustracao.startsWith('http')) {
+        return '<img src="' + cat.ilustracao + '" alt="">';
+      }
+      return cat.ilustracao;
+    }
+
+    function renderCatGrid(lista) {
+      const grid = document.getElementById('catGrid');
+      grid.innerHTML = '';
+      lista.forEach(cat => {
+        const temFilhos = cat.filhos && cat.filhos.length > 0;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cat-card' + (temFilhos ? ' has-children' : '');
+        btn.dataset.pk = cat.pk;
+        btn.innerHTML = '<span class="cat-card-icon">' + catIconHTML(cat) + '</span>'
+                      + '<span class="cat-card-nome">' + cat.nome + '</span>';
+        btn.addEventListener('click', () => {
+          if (temFilhos) {
+            catStack.push({ pk: cat.pk, nome: cat.nome });
+            renderCatNivel(cat.filhos, cat.nome);
+          } else {
+            document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('wCategoria').value = cat.pk;
+            document.getElementById('btnStep1').disabled = false;
+          }
+        });
+        grid.appendChild(btn);
+      });
+    }
+
+    function renderCatNivel(lista, titulo) {
+      renderCatGrid(lista);
+      document.getElementById('catNavHeader').style.display = catStack.length ? 'flex' : 'none';
+      document.getElementById('catNavTitle').textContent = titulo || '';
+      document.getElementById('catHint').style.display = catStack.length ? 'none' : '';
+      // Limpa seleção ao navegar
+      document.getElementById('wCategoria').value = '';
+      document.getElementById('btnStep1').disabled = true;
+    }
+
+    function catVoltar() {
+      catStack.pop();
+      if (catStack.length === 0) {
+        renderCatNivel(catRaizes, '');
+      } else {
+        const pai = catStack[catStack.length - 1];
+        renderCatNivel(catMap[pai.pk].filhos, pai.nome);
+      }
     }
 
     function abrirWizard() {
@@ -673,7 +752,8 @@
       document.getElementById('wData').value = '{{ hoje }}';
       document.getElementById('wCategoria').value = '';
       document.getElementById('btnStep1').disabled = true;
-      document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
+      catStack = [];
+      renderCatNivel(catRaizes, '');
       setWizardStep(1);
       wizardOverlay.classList.add('open');
     }

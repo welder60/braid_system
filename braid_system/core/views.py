@@ -583,7 +583,7 @@ def _ctx_custos(request, editando=None, mes=None, ano=None):
 
     qs = Custo.objects.none()
     total_mes = 0
-    categorias = CategoriaCusto.objects.filter(vinculado_atendimento=False).order_by('nome')
+    categorias = CategoriaCusto.objects.order_by('nome')
 
     if estabelecimento:
         qs = (
