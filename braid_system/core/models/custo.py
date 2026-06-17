@@ -2,7 +2,7 @@ import uuid
 from django.db import models
 
 
-class TipoCusto(models.Model):
+class CategoriaCusto(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     nome = models.CharField(max_length=255)
     ilustracao = models.CharField(max_length=500, blank=True)
@@ -25,7 +25,7 @@ class Custo(models.Model):
         db_column='id_estabelecimento',
     )
     tipo_custo = models.ForeignKey(
-        TipoCusto,
+        CategoriaCusto,
         on_delete=models.PROTECT,
         related_name='custos',
         db_column='id_tipo_custo',

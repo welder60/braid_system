@@ -7,7 +7,7 @@ from .caracteristica import (
     CaracteristicaAtendimentoOpcao,
     AtendimentoCaracteristica,
 )
-from .custo import TipoCusto, Custo
+from .custo import CategoriaCusto, Custo
 
 __all__ = [
     'Usuario',
@@ -19,6 +19,6 @@ __all__ = [
     'CaracteristicaAtendimento',
     'CaracteristicaAtendimentoOpcao',
     'AtendimentoCaracteristica',
-    'TipoCusto',
+    'CategoriaCusto',
     'Custo',
 ]
