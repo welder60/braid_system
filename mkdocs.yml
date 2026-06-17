@@ -1,0 +1,8 @@
+site_name: Braid System
+site_description: Documentação do Braid System — gestão financeira para trancistas
+docs_dir: docs
+
+nav:
+  - Início: index.md
+  - Produto:
+      - Visão do Produto: braid-system-vision.md
