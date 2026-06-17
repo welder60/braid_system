@@ -172,31 +172,7 @@
 </head>
 <body>
 
-  <header>
-    <div class="header-left">
-      <svg width="28" height="28" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M10 26 C10 20 14 16 18 18 C22 20 26 16 26 10" stroke="#E7DAC1" stroke-width="2.5" stroke-linecap="round"/>
-        <path d="M10 18 C10 14 13 12 16 13 C19 14 22 12 22 8" stroke="#C8A15A" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <h1>Gestão</h1>
-    </div>
-    <div class="header-right">
-      {% if user.is_authenticated %}
-        {% if estabelecimento_ativo %}
-          <span class="header-est">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            {{ estabelecimento_ativo.nome }}
-          </span>
-        {% endif %}
-        <span class="header-greeting">Olá, {{ user.nome }}</span>
-        <a href="{% url 'perfil' %}" class="btn-perfil">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-          Perfil
-        </a>
-      {% endif %}
-      <a href="{% url 'logout' %}" class="btn-logout">Sair</a>
-    </div>
-  </header>
+  {% include 'core/_navbar.html' with navbar_title="Gestão" %}
 
   <main>
     <div class="cards-grid">

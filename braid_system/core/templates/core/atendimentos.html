@@ -52,16 +52,7 @@
   </style>
 </head>
 <body>
-  <header>
-    <div class="header-left">
-      <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
-        <path d="M10 26 C10 20 14 16 18 18 C22 20 26 16 26 10" stroke="#E7DAC1" stroke-width="2.5" stroke-linecap="round"/>
-        <path d="M10 18 C10 14 13 12 16 13 C19 14 22 12 22 8" stroke="#C8A15A" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <h1>Atendimentos</h1>
-    </div>
-    <a href="{% url 'gestao' %}" class="btn-back">← Voltar</a>
-  </header>
+  {% include 'core/_navbar.html' with navbar_title="Atendimentos" navbar_show_back=True navbar_back_named_url="gestao" navbar_show_user=False %}
   <main>
     <!-- conteúdo será implementado futuramente -->
   </main>
