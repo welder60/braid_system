@@ -215,11 +215,27 @@
       <img class="hero-logo" src="{% static 'core/img/logo.png' %}" alt="Braid System logo" />
 
       <div>
-        <h2>Bem-vindo ao Braid</h2>
-        <p>Plataforma de gestão para estabelecimentos.<br>Faça login para continuar.</p>
+        <h2>Bem-vinda ao Braid</h2>
+        <p>Plataforma de gestão para trancistas.<br>Faça login para continuar.</p>
       </div>
 
       <div class="divider"></div>
+	  
+	  <!-- Formulário usuário/senha -->
+      <form method="post" action="/login/" class="login-form">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="username">Usuário</label>
+          <input type="text" id="username" name="username" placeholder="Digite seu usuário" autocomplete="username" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password" id="password" name="password" placeholder="Digite sua senha" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn-login">Entrar</button>
+      </form>
+
+      <div class="separator">ou</div>  
 
       <!-- Botão de login — lógica de autenticação será implementada futuramente -->
       <a href="/gestao/" class="btn-google">
@@ -234,21 +250,7 @@
         Entrar com Google
       </a>
 
-      <div class="separator">ou</div>
-
-      <!-- Formulário usuário/senha -->
-      <form method="post" action="/login/" class="login-form">
-        {% csrf_token %}
-        <div class="form-group">
-          <label for="username">Usuário</label>
-          <input type="text" id="username" name="username" placeholder="Digite seu usuário" autocomplete="username" required />
-        </div>
-        <div class="form-group">
-          <label for="password">Senha</label>
-          <input type="password" id="password" name="password" placeholder="Digite sua senha" autocomplete="current-password" required />
-        </div>
-        <button type="submit" class="btn-login">Entrar</button>
-      </form>
+      
     </div>
   </main>
 
