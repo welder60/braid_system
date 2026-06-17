@@ -65,3 +65,4 @@ site/
 *.tar.gz
 *.whl
 *.bat
+erro_log.txt
