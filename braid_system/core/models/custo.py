@@ -14,6 +14,10 @@ class CategoriaCusto(models.Model):
         related_name='subcategorias',
         db_column='id_nivel_superior',
     )
+    vinculado_atendimento = models.BooleanField(
+        default=False,
+        help_text='Indica que custos desta categoria costumam estar associados a um atendimento.',
+    )
 
     class Meta:
         db_table = 'categoria_custo'

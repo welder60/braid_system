@@ -74,11 +74,16 @@ def categoria_custo_criar(request):
         ilustracao = _salvar_ilustracao(request)
         pai_id = request.POST.get('nivel_superior') or None
 
+        vinculado_atendimento = request.POST.get('vinculado_atendimento') == 'on'
+
         if not nome:
             messages.error(request, 'O nome é obrigatório.')
         else:
             pai = get_object_or_404(CategoriaCusto, pk=pai_id) if pai_id else None
-            CategoriaCusto.objects.create(nome=nome, ilustracao=ilustracao, nivel_superior=pai)
+            CategoriaCusto.objects.create(
+                nome=nome, ilustracao=ilustracao,
+                nivel_superior=pai, vinculado_atendimento=vinculado_atendimento,
+            )
             messages.success(request, f'Categoria "{nome}" criada com sucesso!')
             return redirect('categorias_custo')
 
@@ -93,6 +98,8 @@ def categoria_custo_editar(request, pk):
         ilustracao = _salvar_ilustracao(request, atual=categoria.ilustracao)
         pai_id = request.POST.get('nivel_superior') or None
 
+        vinculado_atendimento = request.POST.get('vinculado_atendimento') == 'on'
+
         if not nome:
             messages.error(request, 'O nome é obrigatório.')
         else:
@@ -103,6 +110,7 @@ def categoria_custo_editar(request, pk):
             categoria.nome = nome
             categoria.ilustracao = ilustracao
             categoria.nivel_superior = pai
+            categoria.vinculado_atendimento = vinculado_atendimento
             categoria.save()
             messages.success(request, f'Categoria "{nome}" atualizada.')
             return redirect('categorias_custo')

@@ -309,6 +309,44 @@
       font-size: 0.875rem;
     }
 
+    /* ── Toggle switch ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0.85rem;
+      border: 1px solid #d9cdb8;
+      border-radius: 8px;
+      background: #faf8f4;
+      cursor: pointer;
+    }
+    .toggle-row input[type="checkbox"] { display: none; }
+    .toggle-track {
+      width: 40px;
+      height: 22px;
+      border-radius: 22px;
+      background: #d0c9b8;
+      position: relative;
+      flex-shrink: 0;
+      transition: background 0.2s;
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      transition: left 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle-row input:checked + .toggle-track { background: var(--color-moss); }
+    .toggle-row input:checked + .toggle-track::after { left: 21px; }
+    .toggle-label { font-size: 0.875rem; color: var(--color-forest); line-height: 1.3; }
+    .toggle-label small { display: block; font-size: 0.72rem; color: #999; }
+
     /* ── Modal de confirmação ── */
     .modal-overlay {
       display: none;
@@ -522,6 +560,23 @@
                 </select>
               </div>
 
+              <div class="form-group">
+                <label>Vínculo com atendimento</label>
+                <label class="toggle-row" for="vinculado_atendimento">
+                  <input
+                    type="checkbox"
+                    id="vinculado_atendimento"
+                    name="vinculado_atendimento"
+                    {% if editando and editando.vinculado_atendimento %}checked{% endif %}
+                  >
+                  <span class="toggle-track"></span>
+                  <span class="toggle-label">
+                    </br>Relacionado a atendimento
+                    <small>Custos desta categoria costumam estar vinculados a um atendimento</small>
+                  </span>
+                </label>
+              </div>
+
               <div class="form-actions">
                 <button type="submit" class="btn btn-primary">
                   {% if editando %}💾 Salvar alterações{% else %}➕ Adicionar{% endif %}
@@ -549,6 +604,7 @@
               <tr>
                 <th>Categoria</th>
                 <th>Tipo</th>
+                <th style="text-align:center;">Atendimento</th>
                 <th style="text-align:right;">Ações</th>
               </tr>
             </thead>
@@ -569,6 +625,13 @@
                   </strong>
                 </td>
                 <td></td>
+                <td style="text-align:center;">
+                  {% if cat.vinculado_atendimento %}
+                    <span title="Vinculado a atendimento" style="font-size:1rem;">✅</span>
+                  {% else %}
+                    <span title="Não vinculado" style="color:#ddd;font-size:1rem;">—</span>
+                  {% endif %}
+                </td>
                 <td>
                   <div class="td-actions" style="justify-content:flex-end;">
                     <a href="{% url 'categoria_custo_editar' cat.pk %}" class="btn btn-secondary btn-sm">✏️ Editar</a>
@@ -597,6 +660,13 @@
                   </span>
                 </td>
                 <td><span class="badge-sub">subcategoria</span></td>
+                <td style="text-align:center;">
+                  {% if sub.vinculado_atendimento %}
+                    <span title="Vinculado a atendimento" style="font-size:1rem;">✅</span>
+                  {% else %}
+                    <span title="Não vinculado" style="color:#ddd;font-size:1rem;">—</span>
+                  {% endif %}
+                </td>
                 <td>
                   <div class="td-actions" style="justify-content:flex-end;">
                     <a href="{% url 'categoria_custo_editar' sub.pk %}" class="btn btn-secondary btn-sm">✏️ Editar</a>
