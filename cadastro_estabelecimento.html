@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Novo Estabelecimento — Braid System</title>
+  <style>
+    :root {
+      --color-moss:      #2F3B2E;
+      --color-forest:    #1E2A1F;
+      --color-terracota: #8C4A2F;
+      --color-earth:     #5A3A20;
+      --color-gold:      #C8A15A;
+      --color-sand:      #E7DAC1;
+
+      --bg:           var(--color-sand);
+      --surface:      #FFFFFF;
+      --text:         var(--color-forest);
+      --text-muted:   var(--color-earth);
+      --border:       rgba(0,0,0,0.13);
+      --primary:      var(--color-terracota);
+      --primary-text: #FFFFFF;
+      --accent:       var(--color-gold);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--color-moss);
+      color: var(--color-sand);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    header .back-btn {
+      background: none;
+      border: none;
+      color: var(--color-sand);
+      cursor: pointer;
+      padding: 0.25rem;
+      display: flex;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Main ── */
+    main {
+      flex: 1;
+      padding: 1.5rem 1.25rem 2rem;
+      max-width: 520px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .card-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+    }
+
+    /* ── Form fields ── */
+    .field {
+      margin-bottom: 1.25rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.4rem;
+    }
+
+    label .required {
+      color: var(--primary);
+      margin-left: 2px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      color: var(--text);
+      background: #FAFAF8;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--color-moss);
+      box-shadow: 0 0 0 3px rgba(47,59,46,0.12);
+    }
+
+    input[type="text"].error {
+      border-color: #B23A2E;
+    }
+
+    .field-hint {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+    }
+
+    .field-error {
+      font-size: 0.8rem;
+      color: #B23A2E;
+      margin-top: 0.35rem;
+      display: none;
+    }
+
+    .field-error.visible {
+      display: block;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 1.5rem 0;
+    }
+
+    /* ── Info box ── */
+    .info-box {
+      background: rgba(200,161,90,0.12);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      color: var(--color-earth);
+      line-height: 1.5;
+    }
+
+    /* ── Actions ── */
+    .actions {
+      margin-top: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 0.875rem;
+      background: var(--primary);
+      color: var(--primary-text);
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+      opacity: 0.9;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 0.875rem;
+      background: transparent;
+      color: var(--text-muted);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(0,0,0,0.04);
+    }
+
+    /* ── Success state ── */
+    .success-overlay {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 2rem 1rem;
+      gap: 1rem;
+    }
+
+    .success-overlay.visible {
+      display: flex;
+    }
+
+    .success-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: rgba(74,107,58,0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .success-icon svg {
+      color: #4A6B3A;
+    }
+
+    .success-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .success-sub {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .success-name {
+      font-weight: 600;
+      color: var(--color-forest);
+    }
+
+    .form-content { display: block; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <button class="back-btn" onclick="history.back()" aria-label="Voltar">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+        <path d="M15 18l-6-6 6-6"/>
+      </svg>
+    </button>
+    <h1>Novo estabelecimento</h1>
+  </header>
+
+  <main>
+    <div class="card">
+
+      <!-- Formulário -->
+      <div class="form-content" id="formContent">
+        <p class="card-title">Dados do estabelecimento</p>
+
+        <form id="cadastroForm" novalidate>
+          <div class="field">
+            <label for="nome">
+              Nome do estabelecimento
+              <span class="required" aria-hidden="true">*</span>
+            </label>
+            <input
+              type="text"
+              id="nome"
+              name="nome"
+              placeholder="Ex.: Studio da Ana"
+              autocomplete="organization"
+              maxlength="255"
+              required
+            />
+            <p class="field-error" id="nomeError" role="alert">
+              Informe o nome do estabelecimento.
+            </p>
+            <p class="field-hint">Máximo 255 caracteres.</p>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="info-box">
+            Após o cadastro você poderá vincular profissionais e registrar atendimentos neste estabelecimento.
+          </div>
+
+          <div class="actions">
+            <button type="submit" class="btn-primary">Cadastrar estabelecimento</button>
+            <button type="button" class="btn-secondary" onclick="history.back()">Cancelar</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Feedback de sucesso -->
+      <div class="success-overlay" id="successOverlay" aria-live="polite">
+        <div class="success-icon">
+          <svg width="28" height="28" fill="none" stroke="#4A6B3A" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+        </div>
+        <p class="success-title">Estabelecimento cadastrado!</p>
+        <p class="success-sub">
+          <span class="success-name" id="successName"></span> foi adicionado com sucesso.
+        </p>
+        <div class="actions" style="width:100%">
+          <button class="btn-primary" onclick="resetForm()">Cadastrar outro</button>
+          <button class="btn-secondary" onclick="history.back()">Voltar</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    const form = document.getElementById('cadastroForm');
+    const nomeInput = document.getElementById('nome');
+    const nomeError = document.getElementById('nomeError');
+    const formContent = document.getElementById('formContent');
+    const successOverlay = document.getElementById('successOverlay');
+    const successName = document.getElementById('successName');
+
+    function showError(input, errorEl) {
+      input.classList.add('error');
+      errorEl.classList.add('visible');
+      input.setAttribute('aria-invalid', 'true');
+      input.setAttribute('aria-describedby', errorEl.id);
+    }
+
+    function clearError(input, errorEl) {
+      input.classList.remove('error');
+      errorEl.classList.remove('visible');
+      input.removeAttribute('aria-invalid');
+    }
+
+    nomeInput.addEventListener('input', () => clearError(nomeInput, nomeError));
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      let valid = true;
+      const nome = nomeInput.value.trim();
+
+      if (!nome) {
+        showError(nomeInput, nomeError);
+        nomeInput.focus();
+        valid = false;
+      }
+
+      if (!valid) return;
+
+      // Aqui integre com sua API Django, ex:
+      // const res = await fetch('/api/estabelecimentos/', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+      //   body: JSON.stringify({ nome })
+      // });
+
+      // Simulação de sucesso (remova quando integrar):
+      await new Promise(r => setTimeout(r, 300));
+
+      successName.textContent = nome;
+      formContent.style.display = 'none';
+      successOverlay.classList.add('visible');
+    });
+
+    function resetForm() {
+      form.reset();
+      clearError(nomeInput, nomeError);
+      successOverlay.classList.remove('visible');
+      formContent.style.display = 'block';
+      nomeInput.focus();
+    }
+  </script>
+
+</body>
+</html>
