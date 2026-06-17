@@ -226,7 +226,7 @@
     .btn-icon-del:hover { background: rgba(192,57,43,0.2); }
     .list-empty { padding: 2.5rem; text-align: center; color: rgba(30,42,31,0.4); font-size: 0.88rem; background: #fff; border: 1px solid var(--color-border); border-radius: 12px; }
 
-    /* Modal */
+    /* Modal genérico (exclusão) */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; }
     .modal-overlay.open { display: flex; }
     .modal-box { background: #fff; border-radius: 14px; padding: 1.75rem 1.5rem 1.25rem; max-width: 380px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
@@ -235,6 +235,138 @@
     .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
     .btn-danger { background: #c0392b; color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
     .btn-danger:hover { opacity: 0.88; }
+
+    /* Wizard flutuante – novo custo */
+    .wizard-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-end; justify-content: center; }
+    .wizard-overlay.open { display: flex; }
+    @media (min-width: 520px) {
+      .wizard-overlay { align-items: center; }
+    }
+    .wizard-box {
+      background: #fff;
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-width: 480px;
+      padding: 1.5rem 1.5rem 2rem;
+      box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
+      animation: slideUp 0.22s ease;
+    }
+    @media (min-width: 520px) {
+      .wizard-box { border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.22); animation: none; }
+    }
+    @keyframes slideUp {
+      from { transform: translateY(60px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .wizard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+    .wizard-title { font-size: 0.95rem; font-weight: 700; color: var(--color-forest); }
+    .wizard-close {
+      border: none; background: none; cursor: pointer;
+      color: rgba(30,42,31,0.4); padding: 0.25rem; border-radius: 6px;
+      display: flex; align-items: center; transition: color 0.15s;
+    }
+    .wizard-close:hover { color: var(--color-forest); }
+    /* Steps indicator */
+    .wizard-steps {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 1.5rem;
+    }
+    .wstep {
+      flex: 1;
+      height: 4px;
+      border-radius: 4px;
+      background: var(--color-border);
+      transition: background 0.25s;
+    }
+    .wstep.done  { background: var(--color-gold); }
+    .wstep.active { background: var(--color-moss); }
+    /* Painel de cada step */
+    .wizard-panel { display: none; }
+    .wizard-panel.active { display: block; }
+    .wizard-label { font-size: 0.72rem; font-weight: 700; color: var(--color-earth); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; display: block; }
+    .wizard-input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      border: 1.5px solid var(--color-border);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      background: var(--color-light);
+      color: var(--color-forest);
+      transition: border-color 0.15s;
+      margin-bottom: 1rem;
+    }
+    .wizard-input:focus { outline: none; border-color: var(--color-gold); }
+    .wizard-input.big { font-size: 1.5rem; font-weight: 700; text-align: center; padding: 0.75rem; }
+    .wizard-footer {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      margin-top: 0.25rem;
+    }
+    .btn-wizard-next {
+      background: var(--color-moss);
+      color: var(--color-sand);
+      border: none; border-radius: 10px;
+      padding: 0.6rem 1.5rem;
+      font-size: 0.88rem; font-weight: 700;
+      cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-wizard-next:hover { opacity: 0.85; }
+    .btn-wizard-back {
+      background: transparent;
+      color: var(--color-earth);
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      padding: 0.6rem 1rem;
+      font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .btn-wizard-back:hover { background: var(--color-sand); }
+    .step-hint { font-size: 0.75rem; color: rgba(30,42,31,0.45); margin-bottom: 1.25rem; margin-top: -0.5rem; }
+
+    /* Grade de cards de categoria */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 0.6rem;
+      max-height: 52vh;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .cat-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.75rem 0.4rem 0.6rem;
+      border: 1.5px solid var(--color-border);
+      border-radius: 12px;
+      background: var(--color-light);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+      text-align: center;
+    }
+    .cat-card:hover { border-color: var(--color-gold); background: #fdf9f2; }
+    .cat-card.selected {
+      border-color: var(--color-moss);
+      background: rgba(47,59,46,0.07);
+      box-shadow: 0 0 0 2px var(--color-moss);
+    }
+    .cat-card-icon {
+      font-size: 1.5rem;
+      line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      height: 32px;
+    }
+    .cat-card-icon img { width: 28px; height: 28px; object-fit: cover; border-radius: 6px; }
+    .cat-card-nome { font-size: 0.72rem; font-weight: 600; color: var(--color-forest); line-height: 1.2; }
 
     /* Sem estabelecimento */
     .no-est { text-align: center; padding: 3rem 1rem; color: rgba(30,42,31,0.5); }
@@ -294,7 +426,7 @@
               <div class="mes-total">Total: R$ {{ total_mes }}</div>
             {% endif %}
           </div>
-          <button class="btn-novo" onclick="toggleForm(true)" title="Novo custo">
+          <button class="btn-novo" onclick="abrirWizard()" title="Novo custo">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </button>
         </div>
@@ -336,42 +468,6 @@
             </form>
           </div>
 
-        {% else %}
-          <div class="form-card" id="formCard" style="display:none">
-            <h2>Novo Custo</h2>
-            <form method="post" action="{% url 'custo_criar' %}">
-              {% csrf_token %}
-              <input type="hidden" name="mes" value="{{ mes_ativo }}">
-              <input type="hidden" name="ano" value="{{ ano_ativo }}">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label>Categoria *</label>
-                  <select name="categoria_custo" required>
-                    <option value="">Selecione…</option>
-                    {% for cat in categorias %}
-                      <option value="{{ cat.pk }}">{{ cat.nome }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Data *</label>
-                  <input type="date" name="data" id="dataInput" required>
-                </div>
-                <div class="form-group full">
-                  <label>Descrição</label>
-                  <input type="text" name="descricao" maxlength="255" placeholder="Opcional">
-                </div>
-                <div class="form-group">
-                  <label>Valor (R$) *</label>
-                  <input type="number" name="valor" step="0.01" min="0.01" placeholder="0,00" required>
-                </div>
-              </div>
-              <div class="form-actions">
-                <button type="button" class="btn-cancelar" onclick="toggleForm(false)">Cancelar</button>
-                <button type="submit" class="btn-salvar">Lançar custo</button>
-              </div>
-            </form>
-          </div>
         {% endif %}
 
         {% if not custos %}
@@ -419,6 +515,82 @@
     </div>
   </div>
 
+  <!-- Wizard flutuante – novo custo -->
+  <div class="wizard-overlay" id="wizardOverlay">
+    <div class="wizard-box">
+      <div class="wizard-header">
+        <span class="wizard-title">Novo Custo</span>
+        <button class="wizard-close" onclick="fecharWizard()" aria-label="Fechar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="wizard-steps">
+        <div class="wstep active" id="ws1"></div>
+        <div class="wstep" id="ws2"></div>
+        <div class="wstep" id="ws3"></div>
+      </div>
+
+      <form method="post" action="{% url 'custo_criar' %}" id="wizardForm">
+        {% csrf_token %}
+        <input type="hidden" name="mes" value="{{ mes_ativo }}">
+        <input type="hidden" name="ano" value="{{ ano_ativo }}">
+
+        <!-- Passo 1: Categoria (cards) -->
+        <div class="wizard-panel active" id="wpanel1">
+          <p class="step-hint">Passo 1 de 3 — Selecione a categoria</p>
+          <input type="hidden" id="wCategoria" name="categoria_custo">
+          <div class="cat-grid" id="catGrid">
+            {% for cat in categorias %}
+              <button type="button" class="cat-card" data-pk="{{ cat.pk }}" onclick="selecionarCategoria(this)">
+                <span class="cat-card-icon">
+                  {% if cat.ilustracao %}
+                    {% if cat.ilustracao|slice:":1" == "/" or cat.ilustracao|slice:":4" == "http" %}
+                      <img src="{{ cat.ilustracao }}" alt="">
+                    {% else %}
+                      {{ cat.ilustracao }}
+                    {% endif %}
+                  {% else %}
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  {% endif %}
+                </span>
+                <span class="cat-card-nome">{{ cat.nome }}</span>
+              </button>
+            {% endfor %}
+          </div>
+          <div class="wizard-footer" style="margin-top:1rem">
+            <button type="button" class="btn-wizard-back" onclick="fecharWizard()">Cancelar</button>
+            <button type="button" class="btn-wizard-next" id="btnStep1" onclick="wizardProximo()" disabled>Próximo →</button>
+          </div>
+        </div>
+
+        <!-- Passo 2: Data -->
+        <div class="wizard-panel" id="wpanel2">
+          <p class="step-hint">Passo 2 de 3 — Quando foi o gasto?</p>
+          <label class="wizard-label" for="wData">Data *</label>
+          <input class="wizard-input" type="date" id="wData" name="data" required>
+          <div class="wizard-footer">
+            <button type="button" class="btn-wizard-back" onclick="wizardVoltar()">← Voltar</button>
+            <button type="button" class="btn-wizard-next" onclick="wizardProximo()">Próximo →</button>
+          </div>
+        </div>
+
+        <!-- Passo 3: Valor + Descrição -->
+        <div class="wizard-panel" id="wpanel3">
+          <p class="step-hint">Passo 3 de 3 — Valor e observação</p>
+          <label class="wizard-label" for="wValor">Valor (R$) *</label>
+          <input class="wizard-input big" type="number" id="wValor" name="valor" step="0.01" min="0.01" placeholder="0,00" required>
+          <label class="wizard-label" for="wDescricao">Descrição</label>
+          <input class="wizard-input" type="text" id="wDescricao" name="descricao" maxlength="255" placeholder="Opcional">
+          <div class="wizard-footer">
+            <button type="button" class="btn-wizard-back" onclick="wizardVoltar()">← Voltar</button>
+            <button type="submit" class="btn-wizard-next">Lançar custo</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal de exclusao -->
   <div class="modal-overlay" id="modalExcluir">
     <div class="modal-box">
@@ -463,16 +635,82 @@
       if (next) next.click();
     });
 
-    // Data padrao = hoje
-    const di = document.getElementById('dataInput');
-    if (di) di.value = '{{ hoje }}';
+    // --- Wizard novo custo ---
+    const wizardOverlay = document.getElementById('wizardOverlay');
+    let wizardStep = 1;
 
-    function toggleForm(show) {
-      const card = document.getElementById('formCard');
-      if (!card) return;
-      card.style.display = show ? '' : 'none';
-      if (show) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const panels = [null,
+      document.getElementById('wpanel1'),
+      document.getElementById('wpanel2'),
+      document.getElementById('wpanel3'),
+    ];
+    const stepBars = [null,
+      document.getElementById('ws1'),
+      document.getElementById('ws2'),
+      document.getElementById('ws3'),
+    ];
+
+    function setWizardStep(n) {
+      panels.forEach((p, i) => { if (p) p.classList.toggle('active', i === n); });
+      stepBars.forEach((s, i) => {
+        if (!s) return;
+        s.classList.remove('active', 'done');
+        if (i < n)  s.classList.add('done');
+        if (i === n) s.classList.add('active');
+      });
+      wizardStep = n;
     }
+
+    function selecionarCategoria(el) {
+      document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      document.getElementById('wCategoria').value = el.dataset.pk;
+      document.getElementById('btnStep1').disabled = false;
+    }
+
+    function abrirWizard() {
+      document.getElementById('wizardForm').reset();
+      document.getElementById('wData').value = '{{ hoje }}';
+      document.getElementById('wCategoria').value = '';
+      document.getElementById('btnStep1').disabled = true;
+      document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
+      setWizardStep(1);
+      wizardOverlay.classList.add('open');
+    }
+
+    function fecharWizard() {
+      wizardOverlay.classList.remove('open');
+    }
+
+    function wizardProximo() {
+      if (wizardStep === 1) {
+        if (!document.getElementById('wCategoria').value) return;
+        setWizardStep(2);
+        setTimeout(() => document.getElementById('wData').focus(), 100);
+      } else if (wizardStep === 2) {
+        const dat = document.getElementById('wData');
+        if (!dat.value) { dat.style.borderColor = '#c0392b'; dat.focus(); return; }
+        dat.style.borderColor = '';
+        setWizardStep(3);
+        setTimeout(() => document.getElementById('wValor').focus(), 100);
+      }
+    }
+
+    function wizardVoltar() {
+      if (wizardStep > 1) setWizardStep(wizardStep - 1);
+    }
+
+    // Fechar ao clicar fora
+    if (wizardOverlay) {
+      wizardOverlay.addEventListener('click', function(e) {
+        if (e.target === this) fecharWizard();
+      });
+    }
+
+    // Tecla Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') fecharWizard();
+    });
 
     function abrirModal(pk, desc) {
       document.getElementById('modalDesc').textContent = 'Tem certeza que deseja excluir "' + desc + '"?';
