@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.core.files.storage import default_storage
 from django.conf import settings
-from .models import Estabelecimento, CategoriaCusto
+from .models import Estabelecimento, CategoriaCusto, CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao
 
 
 def home(request):
@@ -125,3 +125,166 @@ def categoria_custo_excluir(request, pk):
         categoria.delete()
         messages.success(request, f'Categoria "{nome}" excluída.')
     return redirect('categorias_custo')
+
+
+# ── Características de Atendimento ────────────────────────────────────────────
+
+def _ctx_caracteristicas(editando=None):
+    return {
+        'caracteristicas': CaracteristicaAtendimento.objects.prefetch_related('opcoes').order_by('ordem'),
+        'total_caracteristicas': CaracteristicaAtendimento.objects.count(),
+        'editando': editando,
+    }
+
+
+def caracteristicas_atendimento(request):
+    return render(request, 'core/caracteristicas_atendimento.html', _ctx_caracteristicas())
+
+
+def caracteristica_atendimento_criar(request):
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        pergunta = request.POST.get('pergunta', '').strip()
+        ordem = request.POST.get('ordem', '').strip()
+        numero_maximo_selecao = request.POST.get('numero_maximo_selecao', '1').strip()
+        contem_dado_sensivel = request.POST.get('contem_dado_sensivel') == 'on'
+
+        if not nome or not pergunta or not ordem:
+            messages.error(request, 'Nome, pergunta e ordem são obrigatórios.')
+        else:
+            CaracteristicaAtendimento.objects.create(
+                nome=nome,
+                pergunta=pergunta,
+                ordem=int(ordem),
+                numero_maximo_selecao=int(numero_maximo_selecao),
+                contem_dado_sensivel=contem_dado_sensivel,
+            )
+            messages.success(request, f'Característica "{nome}" criada com sucesso!')
+            return redirect('caracteristicas_atendimento')
+
+    return render(request, 'core/caracteristicas_atendimento.html', _ctx_caracteristicas())
+
+
+def caracteristica_atendimento_editar(request, pk):
+    caracteristica = get_object_or_404(CaracteristicaAtendimento, pk=pk)
+
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        pergunta = request.POST.get('pergunta', '').strip()
+        ordem = request.POST.get('ordem', '').strip()
+        numero_maximo_selecao = request.POST.get('numero_maximo_selecao', '1').strip()
+        contem_dado_sensivel = request.POST.get('contem_dado_sensivel') == 'on'
+
+        if not nome or not pergunta or not ordem:
+            messages.error(request, 'Nome, pergunta e ordem são obrigatórios.')
+        else:
+            caracteristica.nome = nome
+            caracteristica.pergunta = pergunta
+            caracteristica.ordem = int(ordem)
+            caracteristica.numero_maximo_selecao = int(numero_maximo_selecao)
+            caracteristica.contem_dado_sensivel = contem_dado_sensivel
+            caracteristica.save()
+            messages.success(request, f'Característica "{nome}" atualizada.')
+            return redirect('caracteristicas_atendimento')
+
+    return render(request, 'core/caracteristicas_atendimento.html', _ctx_caracteristicas(editando=caracteristica))
+
+
+def caracteristica_atendimento_excluir(request, pk):
+    caracteristica = get_object_or_404(CaracteristicaAtendimento, pk=pk)
+    if request.method == 'POST':
+        nome = caracteristica.nome
+        caracteristica.delete()
+        messages.success(request, f'Característica "{nome}" excluída.')
+    return redirect('caracteristicas_atendimento')
+
+
+def _ctx_opcoes(caracteristica, editando=None, pre_selecionado=None):
+    opcoes_raiz = (
+        CaracteristicaAtendimentoOpcao.objects
+        .filter(caracteristica_atendimento=caracteristica, nivel_superior__isnull=True)
+        .prefetch_related('subdivisoes')
+        .order_by('nome')
+    )
+    return {
+        'caracteristica': caracteristica,
+        'opcoes_raiz': opcoes_raiz,
+        'total_opcoes': CaracteristicaAtendimentoOpcao.objects.filter(caracteristica_atendimento=caracteristica).count(),
+        'editando': editando,
+        'pre_selecionado': pre_selecionado,
+    }
+
+
+def caracteristica_atendimento_opcoes(request, pk):
+    caracteristica = get_object_or_404(CaracteristicaAtendimento, pk=pk)
+    return render(request, 'core/opcoes_caracteristica_atendimento.html', _ctx_opcoes(caracteristica))
+
+
+def opcao_caracteristica_criar(request, pk):
+    caracteristica = get_object_or_404(CaracteristicaAtendimento, pk=pk)
+
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        ilustracao = request.POST.get('ilustracao', '').strip()
+        nivel_superior_id = request.POST.get('nivel_superior') or None
+
+        if not nome:
+            messages.error(request, 'O nome é obrigatório.')
+        else:
+            nivel_superior = None
+            if nivel_superior_id:
+                nivel_superior = get_object_or_404(
+                    CaracteristicaAtendimentoOpcao,
+                    pk=nivel_superior_id,
+                    caracteristica_atendimento=caracteristica,
+                )
+            CaracteristicaAtendimentoOpcao.objects.create(
+                caracteristica_atendimento=caracteristica,
+                nome=nome,
+                ilustracao=ilustracao,
+                nivel_superior=nivel_superior,
+            )
+            messages.success(request, f'Opção "{nome}" criada com sucesso!')
+            return redirect('caracteristica_atendimento_opcoes', pk=pk)
+
+    return render(request, 'core/opcoes_caracteristica_atendimento.html', _ctx_opcoes(caracteristica))
+
+
+def opcao_caracteristica_editar(request, pk, opcao_pk):
+    caracteristica = get_object_or_404(CaracteristicaAtendimento, pk=pk)
+    opcao = get_object_or_404(CaracteristicaAtendimentoOpcao, pk=opcao_pk, caracteristica_atendimento=caracteristica)
+
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        ilustracao = request.POST.get('ilustracao', '').strip()
+        nivel_superior_id = request.POST.get('nivel_superior') or None
+
+        if not nome:
+            messages.error(request, 'O nome é obrigatório.')
+        else:
+            nivel_superior = None
+            if nivel_superior_id and str(nivel_superior_id) != str(opcao_pk):
+                nivel_superior = get_object_or_404(
+                    CaracteristicaAtendimentoOpcao,
+                    pk=nivel_superior_id,
+                    caracteristica_atendimento=caracteristica,
+                )
+            opcao.nome = nome
+            opcao.ilustracao = ilustracao
+            opcao.nivel_superior = nivel_superior
+            opcao.save()
+            messages.success(request, f'Opção "{nome}" atualizada.')
+            return redirect('caracteristica_atendimento_opcoes', pk=pk)
+
+    return render(request, 'core/opcoes_caracteristica_atendimento.html',
+                  _ctx_opcoes(caracteristica, editando=opcao))
+
+
+def opcao_caracteristica_excluir(request, pk, opcao_pk):
+    caracteristica = get_object_or_404(CaracteristicaAtendimento, pk=pk)
+    opcao = get_object_or_404(CaracteristicaAtendimentoOpcao, pk=opcao_pk, caracteristica_atendimento=caracteristica)
+    if request.method == 'POST':
+        nome = opcao.nome
+        opcao.delete()
+        messages.success(request, f'Opção "{nome}" excluída.')
+    return redirect('caracteristica_atendimento_opcoes', pk=pk)

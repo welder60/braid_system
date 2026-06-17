@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Opções — {{ caracteristica.nome }} — Braid System</title>
+  <style>
+    :root {
+      --color-moss:      #2F3B2E;
+      --color-forest:    #1E2A1F;
+      --color-terracota: #8C4A2F;
+      --color-earth:     #5A3A20;
+      --color-gold:      #C8A15A;
+      --color-sand:      #E7DAC1;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--color-sand);
+      color: var(--color-forest);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--color-moss);
+      color: var(--color-sand);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left { display: flex; align-items: center; gap: 0.75rem; }
+    header .logo-icon { width: 36px; height: 36px; }
+    header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.02em; }
+    header .badge {
+      font-size: 0.7rem;
+      background: var(--color-terracota);
+      color: var(--color-sand);
+      padding: 0.2rem 0.55rem;
+      border-radius: 20px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ── Layout ── */
+    .layout { display: flex; flex: 1; }
+
+    /* ── Sidebar ── */
+    nav.sidebar {
+      width: 240px; min-width: 240px;
+      background: var(--color-forest);
+      color: var(--color-sand);
+      display: flex; flex-direction: column;
+      padding: 1.5rem 0;
+    }
+    .sidebar-section { margin-bottom: 1.5rem; }
+    .sidebar-section-title {
+      font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--color-gold); padding: 0 1.25rem 0.5rem;
+    }
+    .sidebar-menu { list-style: none; }
+    .sidebar-menu li a {
+      display: flex; align-items: center; gap: 0.65rem;
+      padding: 0.65rem 1.25rem;
+      color: rgba(231,218,193,0.75);
+      text-decoration: none; font-size: 0.9rem;
+      transition: background 0.15s, color 0.15s;
+      border-left: 3px solid transparent;
+    }
+    .sidebar-menu li a:hover,
+    .sidebar-menu li a.active {
+      background: rgba(200,161,90,0.12);
+      color: var(--color-sand);
+      border-left-color: var(--color-gold);
+    }
+    .sidebar-menu li a .icon { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
+    .sidebar-divider { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 0.5rem 1.25rem 1rem; }
+
+    /* ── Main ── */
+    main.content { flex: 1; padding: 2rem 2.5rem; }
+
+    /* ── Breadcrumb ── */
+    .breadcrumb {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.8rem; color: #888; margin-bottom: 1.25rem;
+    }
+    .breadcrumb a { color: var(--color-terracota); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .breadcrumb .sep { color: #ccc; }
+
+    .page-title { font-size: 1.4rem; font-weight: 700; color: var(--color-forest); margin-bottom: 0.25rem; }
+    .page-subtitle { font-size: 0.875rem; color: #666; margin-bottom: 2rem; }
+
+    /* ── Info badge ── */
+    .info-strip {
+      display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+      background: #fff; border-radius: 10px;
+      border-left: 4px solid var(--color-gold);
+      padding: 0.85rem 1.25rem; margin-bottom: 1.75rem;
+      box-shadow: 0 1px 6px rgba(30,42,31,0.06);
+    }
+    .info-strip .info-item { font-size: 0.82rem; color: #555; }
+    .info-strip .info-item strong { color: var(--color-forest); }
+    .info-strip .tag-sensivel {
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      font-size: 0.72rem; font-weight: 600;
+      background: #fff3cd; color: #856404;
+      border: 1px solid #ffc107;
+      border-radius: 20px; padding: 0.15rem 0.55rem;
+    }
+
+    /* ── Alerts ── */
+    .messages { list-style: none; margin-bottom: 1.5rem; }
+    .messages li {
+      padding: 0.75rem 1rem; border-radius: 8px;
+      margin-bottom: 0.5rem; font-size: 0.875rem;
+    }
+    .messages li.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .messages li.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+    /* ── Card ── */
+    .card {
+      background: #fff; border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(30,42,31,0.08);
+      padding: 1.5rem 2rem; margin-bottom: 2rem;
+    }
+    .card-title {
+      font-size: 1rem; font-weight: 700;
+      color: var(--color-forest); margin-bottom: 1.25rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+
+    /* ── Form ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem 1.5rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group label { font-size: 0.8rem; font-weight: 600; color: #555; letter-spacing: 0.04em; text-transform: uppercase; }
+    .form-group input[type="text"],
+    .form-group select {
+      padding: 0.6rem 0.85rem;
+      border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: 0.9rem; color: var(--color-forest);
+      transition: border-color 0.15s;
+      font-family: inherit;
+      background: #fff;
+    }
+    .form-group input:focus,
+    .form-group select:focus { outline: none; border-color: var(--color-gold); }
+    .form-group .hint { font-size: 0.75rem; color: #999; }
+
+    .form-actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.6rem 1.25rem; border-radius: 8px;
+      font-size: 0.875rem; font-weight: 600;
+      cursor: pointer; border: none; text-decoration: none;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--color-terracota); color: #fff; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-secondary { background: #eee; color: var(--color-forest); }
+    .btn-secondary:hover { background: #e0e0e0; }
+    .btn-danger { background: #dc3545; color: #fff; }
+    .btn-danger:hover { opacity: 0.88; }
+    .btn-sm { padding: 0.4rem 0.85rem; font-size: 0.8rem; }
+    .btn-icon { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.3rem; border-radius: 6px; transition: background 0.15s; }
+    .btn-icon:hover { background: rgba(0,0,0,0.06); }
+
+    /* ── Tabela de opções ── */
+    .table-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .table-header h3 { font-size: 1rem; font-weight: 700; color: var(--color-forest); }
+    .badge-count {
+      background: var(--color-gold); color: var(--color-forest);
+      border-radius: 20px; padding: 0.15rem 0.6rem;
+      font-size: 0.75rem; font-weight: 700;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: var(--color-forest); color: var(--color-sand);
+      text-align: left; padding: 0.65rem 1rem;
+      font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    thead th:first-child { border-radius: 8px 0 0 0; }
+    thead th:last-child  { border-radius: 0 8px 0 0; }
+    tbody tr { border-bottom: 1px solid #f0ece3; }
+    tbody tr:hover { background: rgba(200,161,90,0.06); }
+    tbody td { padding: 0.75rem 1rem; font-size: 0.875rem; vertical-align: middle; }
+    tbody td.actions { display: flex; gap: 0.4rem; align-items: center; }
+
+    /* árvore de opções */
+    .opcao-raiz { font-weight: 600; }
+    .opcao-sub  { color: #666; padding-left: 1.25rem; }
+    .opcao-sub::before { content: "└ "; color: #ccc; }
+
+    .tag-sub {
+      font-size: 0.7rem; font-weight: 600;
+      background: #e8f4f8; color: #2980b9;
+      border-radius: 20px; padding: 0.1rem 0.5rem;
+      border: 1px solid #bee3f8;
+    }
+
+    .ilustracao-preview {
+      font-size: 1.3rem;
+      min-width: 28px; text-align: center;
+    }
+
+    .empty-state {
+      text-align: center; color: #bbb; padding: 2.5rem 1rem;
+    }
+    .empty-state .ph-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff; border-radius: 12px; padding: 2rem;
+      max-width: 420px; width: 90%; box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+    }
+    .modal h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--color-forest); }
+    .modal p  { font-size: 0.9rem; color: #555; margin-bottom: 1.5rem; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--color-moss); color: rgba(231,218,193,0.5);
+      text-align: center; font-size: 0.75rem; padding: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-left">
+      <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="18" r="18" fill="#C8A15A" opacity="0.2"/>
+        <path d="M10 26 Q18 10 26 26" stroke="#C8A15A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <circle cx="18" cy="14" r="3" fill="#C8A15A"/>
+      </svg>
+      <h1>Braid System</h1>
+      <span class="badge">Admin</span>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-section">
+        <p class="sidebar-section-title">Geral</p>
+        <ul class="sidebar-menu">
+          <li><a href="{% url 'admin_painel' %}"><span class="icon">🏠</span> Dashboard</a></li>
+        </ul>
+      </div>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section">
+        <p class="sidebar-section-title">Financeiro</p>
+        <ul class="sidebar-menu">
+          <li><a href="{% url 'categorias_custo' %}"><span class="icon">🏷️</span> Categorias de Custo</a></li>
+        </ul>
+      </div>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section">
+        <p class="sidebar-section-title">Atendimento</p>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="{% url 'caracteristicas_atendimento' %}" class="active">
+              <span class="icon">📋</span> Características
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section">
+        <p class="sidebar-section-title">Cadastros</p>
+        <ul class="sidebar-menu">
+          <li><a href="#"><span class="icon">🏢</span> Estabelecimentos</a></li>
+          <li><a href="#"><span class="icon">👥</span> Usuários</a></li>
+          <li><a href="#"><span class="icon">⚙️</span> Configurações</a></li>
+        </ul>
+      </div>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section">
+        <ul class="sidebar-menu">
+          <li><a href="{% url 'home' %}"><span class="icon">↩</span> Voltar ao site</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Conteúdo -->
+    <main class="content">
+
+      <!-- Breadcrumb -->
+      <nav class="breadcrumb">
+        <a href="{% url 'admin_painel' %}">Admin</a>
+        <span class="sep">›</span>
+        <a href="{% url 'caracteristicas_atendimento' %}">Características de Atendimento</a>
+        <span class="sep">›</span>
+        <span>{{ caracteristica.nome }}</span>
+      </nav>
+
+      <h2 class="page-title">Opções — {{ caracteristica.nome }}</h2>
+      <p class="page-subtitle">Gerencie as opções e sub-opções desta característica</p>
+
+      <!-- Info da característica -->
+      <div class="info-strip">
+        <div class="info-item"><strong>Pergunta:</strong> {{ caracteristica.pergunta }}</div>
+        <div class="info-item"><strong>Máx. seleções:</strong> {{ caracteristica.numero_maximo_selecao }}</div>
+        {% if caracteristica.contem_dado_sensivel %}
+          <span class="tag-sensivel">⚠️ Dado sensível (LGPD)</span>
+        {% endif %}
+      </div>
+
+      {% if messages %}
+        <ul class="messages">
+          {% for msg in messages %}
+            <li class="{{ msg.tags }}">{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      <!-- Formulário criar / editar opção -->
+      <div class="card">
+        <p class="card-title">
+          {% if editando %}✏️ Editar Opção{% else %}➕ Nova Opção{% endif %}
+        </p>
+
+        <form method="post"
+          action="{% if editando %}{% url 'opcao_caracteristica_editar' caracteristica.pk editando.pk %}{% else %}{% url 'opcao_caracteristica_criar' caracteristica.pk %}{% endif %}">
+          {% csrf_token %}
+
+          <div class="form-grid">
+
+            <div class="form-group">
+              <label for="nome">Nome da opção</label>
+              <input type="text" id="nome" name="nome" required maxlength="255"
+                     value="{{ editando.nome|default:'' }}"
+                     placeholder="Ex: Liso, Cacheado, Ondulado">
+            </div>
+
+            <div class="form-group">
+              <label for="ilustracao">Ilustração <span style="font-weight:400;text-transform:none">(emoji ou URL)</span></label>
+              <input type="text" id="ilustracao" name="ilustracao" maxlength="500"
+                     value="{{ editando.ilustracao|default:'' }}"
+                     placeholder="Ex: 🌀 ou https://...">
+              <span class="hint">Emoji ou link de imagem exibido junto à opção.</span>
+            </div>
+
+            <div class="form-group full">
+              <label for="nivel_superior">Sub-opção de <span style="font-weight:400;text-transform:none">(opcional)</span></label>
+              <select id="nivel_superior" name="nivel_superior">
+                <option value="">— Opção raiz (nível principal) —</option>
+                {% for op in opcoes_raiz %}
+                  {% if not editando or op.pk != editando.pk %}
+                    <option value="{{ op.pk }}"
+                      {% if editando and editando.nivel_superior_id == op.pk %}selected{% endif %}
+                      {% if pre_selecionado == op.pk|stringformat:"s" %}selected{% endif %}>
+                      {% if op.ilustracao %}{{ op.ilustracao }} {% endif %}{{ op.nome }}
+                    </option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <span class="hint">Deixe em branco para criar uma opção de nível principal. Selecione uma opção raiz para criar uma sub-opção.</span>
+            </div>
+
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+              {% if editando %}💾 Salvar alterações{% else %}✅ Criar opção{% endif %}
+            </button>
+            {% if editando %}
+              <a href="{% url 'caracteristica_atendimento_opcoes' caracteristica.pk %}" class="btn btn-secondary">Cancelar</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+
+      <!-- Tabela de opções -->
+      <div class="card">
+        <div class="table-header">
+          <h3>Opções cadastradas</h3>
+          <span class="badge-count">{{ total_opcoes }}</span>
+        </div>
+
+        {% if opcoes_raiz %}
+          <table>
+            <thead>
+              <tr>
+                <th style="width:50px">Ícone</th>
+                <th>Nome</th>
+                <th style="width:120px">Nível</th>
+                <th style="width:90px">Sub-opções</th>
+                <th style="width:120px">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for op in opcoes_raiz %}
+              <!-- Opção raiz -->
+              <tr>
+                <td class="ilustracao-preview">{{ op.ilustracao|default:"—" }}</td>
+                <td class="opcao-raiz">{{ op.nome }}</td>
+                <td><span style="font-size:.75rem; color:#888;">Principal</span></td>
+                <td style="text-align:center; color:#888; font-size:.85rem;">
+                  {{ op.subdivisoes.count }}
+                </td>
+                <td class="actions">
+                  <a href="{% url 'opcao_caracteristica_editar' caracteristica.pk op.pk %}"
+                     class="btn-icon" title="Editar">✏️</a>
+                  <button class="btn-icon" title="Excluir"
+                    onclick="confirmarExclusao('{{ op.pk }}', '{{ op.nome|escapejs }}', false)">🗑️</button>
+                  <button class="btn-icon" title="Adicionar sub-opção"
+                    onclick="adicionarSub('{{ op.pk|escapejs }}')" style="font-size:.85rem;">＋sub</button>
+                </td>
+              </tr>
+              <!-- Sub-opções -->
+              {% for sub in op.subdivisoes.all %}
+              <tr>
+                <td class="ilustracao-preview" style="color:#aaa;">{{ sub.ilustracao|default:"—" }}</td>
+                <td class="opcao-sub">{{ sub.nome }}</td>
+                <td><span class="tag-sub">Sub-opção</span></td>
+                <td style="text-align:center; color:#ccc; font-size:.85rem;">—</td>
+                <td class="actions">
+                  <a href="{% url 'opcao_caracteristica_editar' caracteristica.pk sub.pk %}"
+                     class="btn-icon" title="Editar">✏️</a>
+                  <button class="btn-icon" title="Excluir"
+                    onclick="confirmarExclusao('{{ sub.pk }}', '{{ sub.nome|escapejs }}', true)">🗑️</button>
+                </td>
+              </tr>
+              {% endfor %}
+              {% endfor %}
+            </tbody>
+          </table>
+
+        {% else %}
+          <div class="empty-state">
+            <div class="ph-icon">🔖</div>
+            <p>Nenhuma opção cadastrada ainda.<br>Use o formulário acima para criar a primeira.</p>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Botão voltar -->
+      <a href="{% url 'caracteristicas_atendimento' %}" class="btn btn-secondary">
+        ← Voltar às características
+      </a>
+
+    </main>
+  </div>
+
+  <!-- Modal de confirmação de exclusão -->
+  <div class="modal-overlay" id="modal-excluir">
+    <div class="modal">
+      <h3>Excluir opção</h3>
+      <p id="modal-msg">Tem certeza que deseja excluir esta opção?</p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <form id="form-excluir" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Excluir</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <footer>Braid System &copy; 2026</footer>
+
+  <script>
+    function confirmarExclusao(pk, nome, isSub) {
+      const msg = isSub
+        ? `Excluir a sub-opção "${nome}"?`
+        : `Excluir a opção "${nome}"? Todas as sub-opções vinculadas também serão removidas.`;
+      document.getElementById('modal-msg').textContent = msg;
+      document.getElementById('form-excluir').action =
+        `/admin-painel/caracteristicas-atendimento/{{ caracteristica.pk }}/opcoes/${pk}/excluir/`;
+      document.getElementById('modal-excluir').classList.add('open');
+    }
+
+    function fecharModal() {
+      document.getElementById('modal-excluir').classList.remove('open');
+    }
+
+    document.getElementById('modal-excluir').addEventListener('click', function(e) {
+      if (e.target === this) fecharModal();
+    });
+
+    // Pré-seleciona o select de nível superior ao clicar em "+ sub"
+    function adicionarSub(opcaoPk) {
+      document.getElementById('nivel_superior').value = opcaoPk;
+      document.getElementById('nome').focus();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+
+</body>
+</html>
