@@ -38,6 +38,17 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     data_exclusao = models.DateTimeField(null=True, blank=True)
     ativo = models.BooleanField(default=True)
 
+    groups = models.ManyToManyField(
+        'auth.Group',
+        related_name='core_usuario_set',
+        blank=True,
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        related_name='core_usuario_set',
+        blank=True,
+    )
+
     objects = UsuarioManager()
 
     USERNAME_FIELD = 'email'

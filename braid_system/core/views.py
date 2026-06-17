@@ -1,6 +1,7 @@
 import os
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
 from django.core.files.storage import default_storage
 from django.conf import settings
 from .models import Estabelecimento, CategoriaCusto, CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao
@@ -8,6 +9,25 @@ from .models import Estabelecimento, CategoriaCusto, CaracteristicaAtendimento, 
 
 def home(request):
     return render(request, 'core/home.html')
+
+
+def login_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '')
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('gestao')
+        else:
+            messages.error(request, 'Usuário ou senha inválidos.')
+            return redirect('home')
+    return redirect('home')
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('home')
 
 
 def gestao(request):

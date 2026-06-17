@@ -21,4 +21,47 @@ class UsuarioManager(BaseUserManager):
 
 
 class Usuario(AbstractBaseUser, PermissionsMixin):
-   
+    TIPO_CHOICES = [
+        ('admin', 'Admin'),
+        ('profissional', 'Profissional'),
+        ('gerente', 'Gerente'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    tipo = models.CharField(max_length=50, choices=TIPO_CHOICES)
+    nome = models.CharField(max_length=255)
+    email = models.EmailField(unique=True)
+    is_staff = models.BooleanField(default=False)
+    # LGPD Compliance
+    termos_aceitos = models.BooleanField(default=False)
+    data_consentimento = models.DateTimeField(null=True, blank=True)
+    data_exclusao = models.DateTimeField(null=True, blank=True)
+    ativo = models.BooleanField(default=True)
+
+    groups = models.ManyToManyField(
+        'auth.Group',
+        related_name='security_usuario_set',
+        blank=True,
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        related_name='security_usuario_set',
+        blank=True,
+    )
+
+    objects = UsuarioManager()
+
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['nome']
+
+    class Meta:
+        db_table = 'security_usuario'
+        verbose_name = 'Usuario'
+        verbose_name_plural = 'Usuarios'
+
+    def __str__(self):
+        return f'{self.nome} ({self.email})'
+
+    @property
+    def is_active(self):
+        return self.ativo

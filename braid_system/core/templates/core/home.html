@@ -122,6 +122,78 @@
       flex-shrink: 0;
     }
 
+    /* ── Separador ── */
+    .separator {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      width: 100%;
+      color: #aaa;
+      font-size: 0.8rem;
+    }
+    .separator::before,
+    .separator::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(0,0,0,0.10);
+    }
+
+    /* ── Formulário de login ── */
+    .login-form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.875rem;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      text-align: left;
+    }
+    .form-group label {
+      font-size: 0.825rem;
+      font-weight: 600;
+      color: var(--color-earth);
+    }
+    .form-group input {
+      width: 100%;
+      padding: 0.7rem 0.9rem;
+      border: 1.5px solid rgba(0,0,0,0.15);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      color: var(--color-forest);
+      background: #faf9f7;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-group input:focus {
+      border-color: var(--color-gold);
+      box-shadow: 0 0 0 3px rgba(200,161,90,0.15);
+      background: #fff;
+    }
+    .btn-login {
+      width: 100%;
+      padding: 0.8rem 1.25rem;
+      border: none;
+      border-radius: 10px;
+      background: var(--color-moss);
+      color: var(--color-sand);
+      font-size: 0.975rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+      margin-top: 0.25rem;
+    }
+    .btn-login:hover {
+      background: var(--color-forest);
+      box-shadow: 0 2px 8px rgba(30,42,31,0.18);
+    }
+    .btn-login:active {
+      background: var(--color-earth);
+    }
+
     /* ── Footer ── */
     footer {
       text-align: center;
@@ -171,6 +243,22 @@
         </svg>
         Entrar com Google
       </a>
+
+      <div class="separator">ou</div>
+
+      <!-- Formulário usuário/senha -->
+      <form method="post" action="/login/" class="login-form">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="username">Usuário</label>
+          <input type="text" id="username" name="username" placeholder="Digite seu usuário" autocomplete="username" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password" id="password" name="password" placeholder="Digite sua senha" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn-login">Entrar</button>
+      </form>
     </div>
   </main>
 
