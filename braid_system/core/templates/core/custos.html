@@ -113,11 +113,11 @@
       color: var(--color-forest);
       border: none;
       border-radius: 8px;
-      padding: 0.5rem 1rem;
-      font-size: 0.82rem;
-      font-weight: 700;
+      width: 36px; height: 36px;
+      display: inline-flex; align-items: center; justify-content: center;
       cursor: pointer;
       transition: opacity 0.15s;
+      flex-shrink: 0;
     }
     .btn-novo:hover { opacity: 0.85; }
 
@@ -192,28 +192,39 @@
     }
     .btn-cancelar:hover { background: var(--color-sand); }
 
-    /* Tabela */
-    .table-wrap { background: #fff; border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; }
-    .table-empty { padding: 2.5rem; text-align: center; color: rgba(30,42,31,0.4); font-size: 0.88rem; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    thead { background: var(--color-moss); color: var(--color-sand); }
-    thead th { padding: 0.65rem 1rem; text-align: left; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
-    tbody tr { border-bottom: 1px solid var(--color-border); transition: background 0.12s; }
-    tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: #fdf9f2; }
-    tbody td { padding: 0.7rem 1rem; vertical-align: middle; }
-    .td-valor { font-weight: 700; color: var(--color-earth); white-space: nowrap; }
-    .td-data  { white-space: nowrap; color: rgba(30,42,31,0.6); font-size: 0.8rem; }
-    .td-cat   { font-size: 0.78rem; color: rgba(30,42,31,0.55); }
-    .td-acoes { white-space: nowrap; }
-    .btn-edit, .btn-del {
-      border: none; border-radius: 6px; padding: 0.3rem 0.6rem;
-      font-size: 0.75rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block;
+    /* Lista de cards de custos */
+    .custos-lista { display: flex; flex-direction: column; gap: 0.6rem; }
+    .custo-card {
+      background: #fff;
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
     }
-    .btn-edit { background: rgba(200,161,90,0.18); color: var(--color-earth); }
-    .btn-edit:hover { background: rgba(200,161,90,0.38); }
-    .btn-del  { background: rgba(192,57,43,0.1); color: #c0392b; margin-left: 0.3rem; }
-    .btn-del:hover { background: rgba(192,57,43,0.22); }
+    .custo-card-info { flex: 1; min-width: 0; }
+    .custo-card-top {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .custo-valor { font-size: 1rem; font-weight: 700; color: var(--color-earth); white-space: nowrap; }
+    .custo-cat   { font-size: 0.75rem; color: rgba(30,42,31,0.55); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .custo-desc  { font-size: 0.82rem; color: rgba(30,42,31,0.7); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .custo-data  { font-size: 0.75rem; color: rgba(30,42,31,0.45); white-space: nowrap; margin-left: auto; align-self: flex-start; padding-top: 0.1rem; }
+    .custo-acoes { display: flex; gap: 0.35rem; flex-shrink: 0; }
+    .btn-icon {
+      border: none; border-radius: 8px; width: 34px; height: 34px;
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; text-decoration: none; transition: background 0.15s;
+    }
+    .btn-icon-edit { background: rgba(200,161,90,0.15); color: var(--color-earth); }
+    .btn-icon-edit:hover { background: rgba(200,161,90,0.35); }
+    .btn-icon-del  { background: rgba(192,57,43,0.08); color: #c0392b; }
+    .btn-icon-del:hover { background: rgba(192,57,43,0.2); }
+    .list-empty { padding: 2.5rem; text-align: center; color: rgba(30,42,31,0.4); font-size: 0.88rem; background: #fff; border: 1px solid var(--color-border); border-radius: 12px; }
 
     /* Modal */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; }
@@ -283,7 +294,9 @@
               <div class="mes-total">Total: R$ {{ total_mes }}</div>
             {% endif %}
           </div>
-          <button class="btn-novo" onclick="toggleForm(true)">+ Novo custo</button>
+          <button class="btn-novo" onclick="toggleForm(true)" title="Novo custo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
         </div>
 
         {% if editando %}
@@ -361,37 +374,46 @@
           </div>
         {% endif %}
 
-        <div class="table-wrap">
-          {% if not custos %}
-            <div class="table-empty">Nenhum custo lançado para {{ mes_label }}.</div>
-          {% else %}
-            <table>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Categoria</th>
-                  <th>Descrição</th>
-                  <th>Valor</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for custo in custos %}
-                  <tr>
-                    <td class="td-data">{{ custo.data|date:"d/m" }}</td>
-                    <td class="td-cat">{{ custo.categoria_custo.nome }}</td>
-                    <td>{{ custo.descricao|default:"—" }}</td>
-                    <td class="td-valor">R$ {{ custo.valor }}</td>
-                    <td class="td-acoes">
-                      <a class="btn-edit" href="{% url 'custo_editar' custo.pk %}?mes={{ mes_ativo }}&ano={{ ano_ativo }}">Editar</a>
-                      <button class="btn-del" onclick="abrirModal('{{ custo.pk }}','{{ custo.descricao|default:custo.categoria_custo.nome|escapejs }}')">Excluir</button>
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          {% endif %}
-        </div>
+        {% if not custos %}
+          <div class="list-empty">Nenhum custo lançado para {{ mes_label }}.</div>
+        {% else %}
+          <div class="custos-lista">
+            {% for custo in custos %}
+              <div class="custo-card">
+                <div class="custo-card-info">
+                  <div class="custo-card-top">
+                    <span class="custo-valor">R$ {{ custo.valor }}</span>
+                    <span class="custo-cat">{{ custo.categoria_custo.nome }}</span>
+                  </div>
+                  {% if custo.descricao %}
+                    <div class="custo-desc">{{ custo.descricao }}</div>
+                  {% endif %}
+                </div>
+                <span class="custo-data">{{ custo.data|date:"d/m" }}</span>
+                <div class="custo-acoes">
+                  <a class="btn-icon btn-icon-edit"
+                     href="{% url 'custo_editar' custo.pk %}?mes={{ mes_ativo }}&ano={{ ano_ativo }}"
+                     title="Editar">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </a>
+                  <button class="btn-icon btn-icon-del"
+                          onclick="abrirModal('{{ custo.pk }}','{{ custo.descricao|default:custo.categoria_custo.nome|escapejs }}')"
+                          title="Excluir">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                      <path d="M10 11v6M14 11v6"/>
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
 
       {% endif %}
     </div>
