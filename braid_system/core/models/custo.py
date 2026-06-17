@@ -16,9 +16,9 @@ class CategoriaCusto(models.Model):
     )
 
     class Meta:
-        db_table = 'tipo_custo'
-        verbose_name = 'Tipo de Custo'
-        verbose_name_plural = 'Tipos de Custo'
+        db_table = 'categoria_custo'
+        verbose_name = 'Categoria de Custo'
+        verbose_name_plural = 'Categorias de Custo'
 
     def __str__(self):
         return self.nome
@@ -32,11 +32,11 @@ class Custo(models.Model):
         related_name='custos',
         db_column='id_estabelecimento',
     )
-    tipo_custo = models.ForeignKey(
+    categoria_custo = models.ForeignKey(
         CategoriaCusto,
         on_delete=models.PROTECT,
         related_name='custos',
-        db_column='id_tipo_custo',
+        db_column='id_categoria_custo',
     )
     atendimento = models.ForeignKey(
         'core.Atendimento',
@@ -56,4 +56,4 @@ class Custo(models.Model):
         verbose_name_plural = 'Custos'
 
     def __str__(self):
-        return f'{self.tipo_custo} - {self.descricao}: R$ {self.valor}'
+        return f'{self.categoria_custo} - {self.descricao}: R$ {self.valor}'
