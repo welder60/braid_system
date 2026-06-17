@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.utils import timezone
 
 
 class Estabelecimento(models.Model):
@@ -40,7 +41,7 @@ class EstabelecimentoUsuario(models.Model):
         choices=TIPO_ACESSO_CHOICES,
         default='ver',
     )
-    data_inclusao = models.DateTimeField(auto_now_add=True)
+    data_inclusao = models.DateTimeField(default=timezone.now)
     incluido_por = models.ForeignKey(
         'security.Usuario',
         on_delete=models.SET_NULL,

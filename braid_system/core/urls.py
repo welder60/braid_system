@@ -37,4 +37,10 @@ urlpatterns = [
     path('admin-painel/caracteristicas-atendimento/<uuid:pk>/opcoes/criar/', views.opcao_caracteristica_criar, name='opcao_caracteristica_criar'),
     path('admin-painel/caracteristicas-atendimento/<uuid:pk>/opcoes/<uuid:opcao_pk>/editar/', views.opcao_caracteristica_editar, name='opcao_caracteristica_editar'),
     path('admin-painel/caracteristicas-atendimento/<uuid:pk>/opcoes/<uuid:opcao_pk>/excluir/', views.opcao_caracteristica_excluir, name='opcao_caracteristica_excluir'),
+
+    # Acessos de usuários a estabelecimentos
+    path('admin-painel/acessos/', views.acessos_estabelecimento, name='acessos_estabelecimento'),
+    path('admin-painel/acessos/criar/', views.acesso_criar, name='acesso_criar'),
+    path('admin-painel/acessos/<uuid:pk>/editar/', views.acesso_editar, name='acesso_editar'),
+    path('admin-painel/acessos/<uuid:pk>/excluir/', views.acesso_excluir, name='acesso_excluir'),
 ]

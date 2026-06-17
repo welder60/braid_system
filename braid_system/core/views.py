@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.files.storage import default_storage
 from django.conf import settings
-from .models import Estabelecimento, CategoriaCusto, CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao
+from .models import Estabelecimento, EstabelecimentoUsuario, CategoriaCusto, CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao
 from braid_system.security.models.usuario import Usuario
 
 
@@ -425,3 +425,92 @@ def usuario_excluir(request, pk):
         usuario.delete()
         messages.success(request, f'Usuário "{nome}" excluído.')
     return redirect('usuarios')
+
+
+# ── Acessos de usuários a estabelecimentos ────────────────────────────────────
+
+def _ctx_acessos(request, editando=None):
+    filtro_est = request.GET.get('estabelecimento', '')
+    filtro_usr = request.GET.get('usuario', '')
+
+    qs = EstabelecimentoUsuario.objects.select_related(
+        'usuario', 'estabelecimento', 'incluido_por'
+    ).order_by('estabelecimento__nome', 'usuario__nome')
+
+    if filtro_est:
+        qs = qs.filter(estabelecimento_id=filtro_est)
+    if filtro_usr:
+        qs = qs.filter(usuario_id=filtro_usr)
+
+    return {
+        'acessos': qs,
+        'total_acessos': qs.count(),
+        'usuarios': Usuario.objects.filter(ativo=True).order_by('nome'),
+        'estabelecimentos': Estabelecimento.objects.order_by('nome'),
+        'editando': editando,
+        'filtro_estabelecimento': filtro_est,
+        'filtro_usuario': filtro_usr,
+    }
+
+
+def acessos_estabelecimento(request):
+    return render(request, 'core/acessos_estabelecimento.html', _ctx_acessos(request))
+
+
+def acesso_criar(request):
+    if request.method == 'POST':
+        usuario_id = request.POST.get('usuario', '').strip()
+        estabelecimento_id = request.POST.get('estabelecimento', '').strip()
+        tipo_acesso = request.POST.get('tipo_acesso', '').strip()
+
+        if not usuario_id or not estabelecimento_id or not tipo_acesso:
+            messages.error(request, 'Todos os campos são obrigatórios.')
+        elif EstabelecimentoUsuario.objects.filter(
+            usuario_id=usuario_id, estabelecimento_id=estabelecimento_id
+        ).exists():
+            messages.error(request, 'Este usuário já possui acesso a esse estabelecimento.')
+        else:
+            usuario = get_object_or_404(Usuario, pk=usuario_id)
+            estabelecimento = get_object_or_404(Estabelecimento, pk=estabelecimento_id)
+            EstabelecimentoUsuario.objects.create(
+                usuario=usuario,
+                estabelecimento=estabelecimento,
+                tipo_acesso=tipo_acesso,
+                incluido_por=request.user if request.user.is_authenticated else None,
+            )
+            messages.success(
+                request,
+                f'Acesso de "{usuario.nome}" ao estabelecimento "{estabelecimento.nome}" criado.'
+            )
+            return redirect('acessos_estabelecimento')
+
+    return render(request, 'core/acessos_estabelecimento.html', _ctx_acessos(request))
+
+
+def acesso_editar(request, pk):
+    acesso = get_object_or_404(EstabelecimentoUsuario, pk=pk)
+
+    if request.method == 'POST':
+        tipo_acesso = request.POST.get('tipo_acesso', '').strip()
+        if not tipo_acesso:
+            messages.error(request, 'Selecione um nível de acesso.')
+        else:
+            acesso.tipo_acesso = tipo_acesso
+            acesso.save()
+            messages.success(
+                request,
+                f'Acesso de "{acesso.usuario.nome}" atualizado para "{acesso.get_tipo_acesso_display()}".'
+            )
+            return redirect('acessos_estabelecimento')
+
+    return render(request, 'core/acessos_estabelecimento.html', _ctx_acessos(request, editando=acesso))
+
+
+def acesso_excluir(request, pk):
+    acesso = get_object_or_404(EstabelecimentoUsuario, pk=pk)
+    if request.method == 'POST':
+        nome_usuario = acesso.usuario.nome
+        nome_est = acesso.estabelecimento.nome
+        acesso.delete()
+        messages.success(request, f'Acesso de "{nome_usuario}" ao "{nome_est}" removido.')
+    return redirect('acessos_estabelecimento')

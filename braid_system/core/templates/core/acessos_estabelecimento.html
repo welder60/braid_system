@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Usuários — Braid System</title>
+  <title>Acessos a Estabelecimentos — Braid System</title>
   <style>
     :root {
       --color-moss:      #2F3B2E;
@@ -119,11 +119,11 @@
       text-decoration: none;
     }
     .btn:hover { filter: brightness(1.1); }
-    .btn-primary { background: var(--color-terracota); color: var(--color-sand); }
+    .btn-primary   { background: var(--color-terracota); color: var(--color-sand); }
     .btn-secondary { background: var(--color-moss); color: var(--color-sand); }
-    .btn-ghost { background: transparent; color: var(--color-forest); border: 1px solid #ccc; }
-    .btn-danger { background: #c0392b; color: #fff; }
-    .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+    .btn-ghost     { background: transparent; color: var(--color-forest); border: 1px solid #ccc; }
+    .btn-danger    { background: #c0392b; color: #fff; }
+    .btn-sm        { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
 
     /* ── Mensagens ── */
     .messages { list-style: none; margin-bottom: 1.25rem; }
@@ -139,7 +139,7 @@
     /* ── Grid de dois painéis ── */
     .two-col {
       display: grid;
-      grid-template-columns: 1fr 1.6fr;
+      grid-template-columns: 1fr 1.8fr;
       gap: 1.5rem;
       align-items: start;
     }
@@ -211,8 +211,8 @@
     tbody td { padding: 0.75rem 1rem; vertical-align: middle; }
     .td-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
 
-    /* ── Badge de tipo ── */
-    .tipo-badge {
+    /* ── Badge de acesso ── */
+    .acesso-badge {
       display: inline-block;
       font-size: 0.7rem;
       font-weight: 700;
@@ -221,23 +221,25 @@
       padding: 0.2rem 0.55rem;
       border-radius: 20px;
     }
-    .tipo-admin       { background: #fde8e0; color: var(--color-terracota); }
-    .tipo-gerente     { background: #fef9ec; color: var(--color-earth); }
-    .tipo-profissional { background: #eaf4ec; color: var(--color-moss); }
-
-    /* ── Badge ativo/inativo ── */
-    .status-badge {
-      display: inline-block;
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 0.2rem 0.55rem;
-      border-radius: 20px;
-    }
-    .status-ativo   { background: #d4edda; color: #155724; }
-    .status-inativo { background: #f8d7da; color: #721c24; }
+    .acesso-ver          { background: #e8f4fd; color: #1a6fa8; }
+    .acesso-editar       { background: #fef9ec; color: var(--color-earth); }
+    .acesso-administrar  { background: #fde8e0; color: var(--color-terracota); }
 
     /* ── Empty state ── */
     .empty { text-align: center; padding: 2rem; color: #bbb; font-size: 0.875rem; }
+
+    /* ── Filtro ── */
+    .filtro-bar {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid #f0ebe0;
+      background: #faf8f4;
+    }
+    .filtro-bar select.form-control {
+      max-width: 220px;
+      padding: 0.45rem 0.75rem;
+    }
 
     /* ── Modal de confirmação ── */
     .modal-overlay {
@@ -259,7 +261,7 @@
       box-shadow: 0 8px 40px rgba(0,0,0,0.18);
     }
     .modal h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.6rem; color: var(--color-forest); }
-    .modal p { font-size: 0.875rem; color: #555; margin-bottom: 1.5rem; }
+    .modal p  { font-size: 0.875rem; color: #555; margin-bottom: 1.5rem; }
     .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
 
     /* ── Footer ── */
@@ -322,12 +324,12 @@
       <p class="sidebar-section-title">Cadastros</p>
       <ul class="sidebar-menu">
         <li><a href="{% url 'estabelecimentos' %}"><span class="icon">🏢</span> Estabelecimentos</a></li>
+        <li><a href="{% url 'usuarios' %}"><span class="icon">👥</span> Usuários</a></li>
         <li>
-          <a href="{% url 'usuarios' %}" class="active">
-            <span class="icon">👥</span> Usuários
+          <a href="{% url 'acessos_estabelecimento' %}" class="active">
+            <span class="icon">🔑</span> Acessos
           </a>
         </li>
-        <li><a href="{% url 'acessos_estabelecimento' %}"><span class="icon">🔑</span> Acessos</a></li>
         <li><a href="#"><span class="icon">⚙️</span> Configurações</a></li>
       </ul>
     </div>
@@ -346,8 +348,8 @@
 
     <div class="page-header">
       <div>
-        <h2 class="page-title">Usuários</h2>
-        <p class="page-subtitle">Gerencie os usuários cadastrados no sistema</p>
+        <h2 class="page-title">Acessos a Estabelecimentos</h2>
+        <p class="page-subtitle">Gerencie quais usuários têm acesso a cada estabelecimento</p>
       </div>
     </div>
 
@@ -367,93 +369,74 @@
         <div class="card-header">
           <h3>
             {% if editando %}
-              ✏️ Editar Usuário
+              ✏️ Editar Acesso
             {% else %}
-              ➕ Novo Usuário
+              ➕ Novo Acesso
             {% endif %}
           </h3>
         </div>
         <div class="card-body">
           <form
             method="post"
-            action="{% if editando %}{% url 'usuario_editar' editando.pk %}{% else %}{% url 'usuario_criar' %}{% endif %}"
+            action="{% if editando %}{% url 'acesso_editar' editando.pk %}{% else %}{% url 'acesso_criar' %}{% endif %}"
           >
             {% csrf_token %}
 
             <div class="form-group">
-              <label for="nome">Nome</label>
-              <input
-                type="text"
-                id="nome"
-                name="nome"
-                class="form-control"
-                placeholder="Nome completo"
-                value="{{ editando.nome|default:'' }}"
-                required
-                maxlength="255"
-                autofocus
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="email">E-mail</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                class="form-control"
-                placeholder="usuario@exemplo.com"
-                value="{{ editando.email|default:'' }}"
-                required
-                maxlength="254"
-                {% if editando %}readonly{% endif %}
-              />
+              <label for="usuario">Usuário</label>
+              <select id="usuario" name="usuario" class="form-control" required {% if editando %}disabled{% endif %}>
+                <option value="">Selecione…</option>
+                {% for u in usuarios %}
+                <option value="{{ u.pk }}"
+                  {% if editando.usuario_id == u.pk %}selected{% endif %}
+                  {% if not editando and usuario_selecionado == u.pk|stringformat:"s" %}selected{% endif %}
+                >{{ u.nome }} ({{ u.email }})</option>
+                {% endfor %}
+              </select>
               {% if editando %}
-              <p class="form-hint">O e-mail não pode ser alterado após o cadastro.</p>
+              <p class="form-hint">O usuário não pode ser alterado após o vínculo ser criado.</p>
+              <!-- campo oculto para manter o valor ao submeter -->
+              <input type="hidden" name="usuario" value="{{ editando.usuario_id }}">
               {% endif %}
             </div>
 
             <div class="form-group">
-              <label for="tipo">Tipo</label>
-              <select id="tipo" name="tipo" class="form-control" required>
+              <label for="estabelecimento">Estabelecimento</label>
+              <select id="estabelecimento" name="estabelecimento" class="form-control" required {% if editando %}disabled{% endif %}>
                 <option value="">Selecione…</option>
-                <option value="admin"        {% if editando.tipo == 'admin' %}selected{% endif %}>Admin</option>
-                <option value="gerente"      {% if editando.tipo == 'gerente' %}selected{% endif %}>Gerente</option>
-                <option value="profissional" {% if editando.tipo == 'profissional' %}selected{% endif %}>Profissional</option>
+                {% for e in estabelecimentos %}
+                <option value="{{ e.pk }}"
+                  {% if editando.estabelecimento_id == e.pk %}selected{% endif %}
+                  {% if not editando and estabelecimento_selecionado == e.pk|stringformat:"s" %}selected{% endif %}
+                >{{ e.nome }}</option>
+                {% endfor %}
               </select>
+              {% if editando %}
+              <input type="hidden" name="estabelecimento" value="{{ editando.estabelecimento_id }}">
+              {% endif %}
             </div>
 
-            {% if not editando %}
             <div class="form-group">
-              <label for="password">Senha</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                class="form-control"
-                placeholder="Mínimo 8 caracteres"
-                minlength="8"
-                required
-              />
-            </div>
-            {% endif %}
-
-            {% if editando %}
-            <div class="form-group">
-              <label for="ativo">Status</label>
-              <select id="ativo" name="ativo" class="form-control">
-                <option value="1" {% if editando.ativo %}selected{% endif %}>Ativo</option>
-                <option value="0" {% if not editando.ativo %}selected{% endif %}>Inativo</option>
+              <label for="tipo_acesso">Nível de acesso</label>
+              <select id="tipo_acesso" name="tipo_acesso" class="form-control" required>
+                <option value="">Selecione…</option>
+                <option value="ver"         {% if editando.tipo_acesso == 'ver' %}selected{% endif %}>👁 Ver</option>
+                <option value="editar"      {% if editando.tipo_acesso == 'editar' %}selected{% endif %}>✏️ Editar</option>
+                <option value="administrar" {% if editando.tipo_acesso == 'administrar' %}selected{% endif %}>🔧 Administrar</option>
               </select>
+              <p class="form-hint">
+                <strong>Ver</strong>: consulta somente leitura ·
+                <strong>Editar</strong>: pode alterar dados ·
+                <strong>Administrar</strong>: acesso completo
+              </p>
             </div>
-            {% endif %}
 
             <div class="form-actions">
               <button type="submit" class="btn btn-primary">
                 {% if editando %}💾 Salvar alterações{% else %}➕ Adicionar{% endif %}
               </button>
               {% if editando %}
-              <a href="{% url 'usuarios' %}" class="btn btn-ghost">Cancelar</a>
+              <a href="{% url 'acessos_estabelecimento' %}" class="btn btn-ghost">Cancelar</a>
               {% endif %}
             </div>
           </form>
@@ -463,44 +446,70 @@
       <!-- ── Painel direito: lista ── -->
       <div class="card">
         <div class="card-header">
-          <h3>👥 Usuários cadastrados</h3>
-          <span style="font-size:0.8rem;color:#aaa;">{{ total_usuarios }} registro{{ total_usuarios|pluralize:",s" }}</span>
+          <h3>🔑 Acessos cadastrados</h3>
+          <span style="font-size:0.8rem;color:#aaa;">{{ total_acessos }} registro{{ total_acessos|pluralize:",s" }}</span>
         </div>
 
-        {% if usuarios %}
+        <!-- Filtro -->
+        <form method="get" action="{% url 'acessos_estabelecimento' %}">
+          <div class="filtro-bar">
+            <select name="estabelecimento" class="form-control" onchange="this.form.submit()">
+              <option value="">Todos os estabelecimentos</option>
+              {% for e in estabelecimentos %}
+              <option value="{{ e.pk }}" {% if filtro_estabelecimento == e.pk|stringformat:"s" %}selected{% endif %}>
+                {{ e.nome }}
+              </option>
+              {% endfor %}
+            </select>
+            <select name="usuario" class="form-control" onchange="this.form.submit()">
+              <option value="">Todos os usuários</option>
+              {% for u in usuarios %}
+              <option value="{{ u.pk }}" {% if filtro_usuario == u.pk|stringformat:"s" %}selected{% endif %}>
+                {{ u.nome }}
+              </option>
+              {% endfor %}
+            </select>
+            {% if filtro_estabelecimento or filtro_usuario %}
+            <a href="{% url 'acessos_estabelecimento' %}" class="btn btn-ghost btn-sm" style="white-space:nowrap;">✕ Limpar</a>
+            {% endif %}
+          </div>
+        </form>
+
+        {% if acessos %}
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Nome / E-mail</th>
-                <th>Tipo</th>
-                <th>Status</th>
+                <th>Usuário</th>
+                <th>Estabelecimento</th>
+                <th>Acesso</th>
+                <th>Incluído em</th>
                 <th style="text-align:right;">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {% for u in usuarios %}
+              {% for a in acessos %}
               <tr>
                 <td>
-                  <strong>{{ u.nome }}</strong><br>
-                  <span style="font-size:0.8rem;color:#888;">{{ u.email }}</span>
+                  <strong>{{ a.usuario.nome }}</strong><br>
+                  <span style="font-size:0.8rem;color:#888;">{{ a.usuario.email }}</span>
                 </td>
+                <td>{{ a.estabelecimento.nome }}</td>
                 <td>
-                  <span class="tipo-badge tipo-{{ u.tipo }}">{{ u.get_tipo_display }}</span>
+                  <span class="acesso-badge acesso-{{ a.tipo_acesso }}">{{ a.get_tipo_acesso_display }}</span>
                 </td>
-                <td>
-                  {% if u.ativo %}
-                    <span class="status-badge status-ativo">Ativo</span>
-                  {% else %}
-                    <span class="status-badge status-inativo">Inativo</span>
+                <td style="font-size:0.8rem;color:#888;">
+                  {{ a.data_inclusao|date:"d/m/Y" }}
+                  {% if a.incluido_por %}
+                  <br>por {{ a.incluido_por.nome }}
                   {% endif %}
                 </td>
                 <td>
                   <div class="td-actions">
-                    <a href="{% url 'usuario_editar' u.pk %}" class="btn btn-secondary btn-sm">✏️ Editar</a>
+                    <a href="{% url 'acesso_editar' a.pk %}" class="btn btn-secondary btn-sm">✏️ Editar</a>
                     <button
                       class="btn btn-danger btn-sm"
-                      onclick="abrirModal('{{ u.pk }}', '{{ u.nome|escapejs }}')"
+                      onclick="abrirModal('{{ a.pk }}', '{{ a.usuario.nome|escapejs }}', '{{ a.estabelecimento.nome|escapejs }}')"
                     >🗑️ Excluir</button>
                   </div>
                 </td>
@@ -511,7 +520,7 @@
         </div>
         {% else %}
         <div class="empty">
-          <p>Nenhum usuário cadastrado ainda.</p>
+          <p>Nenhum acesso cadastrado{% if filtro_estabelecimento or filtro_usuario %} para este filtro{% endif %}.</p>
         </div>
         {% endif %}
       </div>
@@ -527,7 +536,7 @@
 <div class="modal-overlay" id="modal-excluir">
   <div class="modal">
     <h4>Confirmar exclusão</h4>
-    <p id="modal-msg">Deseja excluir este usuário?</p>
+    <p id="modal-msg">Deseja remover este acesso?</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
       <form id="form-excluir" method="post" action="">
@@ -539,11 +548,11 @@
 </div>
 
 <script>
-  function abrirModal(pk, nome) {
+  function abrirModal(pk, usuario, estabelecimento) {
     document.getElementById('modal-msg').textContent =
-      'Deseja excluir "' + nome + '"? Esta ação não pode ser desfeita.';
+      'Deseja remover o acesso de "' + usuario + '" ao estabelecimento "' + estabelecimento + '"? Esta ação não pode ser desfeita.';
     document.getElementById('form-excluir').action =
-      '{% url "usuario_excluir" "00000000-0000-0000-0000-000000000000" %}'.replace(
+      '{% url "acesso_excluir" "00000000-0000-0000-0000-000000000000" %}'.replace(
         '00000000-0000-0000-0000-000000000000', pk
       );
     document.getElementById('modal-excluir').classList.add('open');
