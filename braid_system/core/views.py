@@ -537,3 +537,29 @@ def acesso_excluir(request, pk):
         acesso.delete()
         messages.success(request, f'Acesso de "{nome_usuario}" ao "{nome_est}" removido.')
     return redirect('acessos_estabelecimento')
+
+
+# ── Módulos principais ─────────────────────────────────────────────────────────
+
+def atendimentos(request):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    return render(request, 'core/atendimentos.html')
+
+
+def custos(request):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    return render(request, 'core/custos.html')
+
+
+def clientes(request):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    return render(request, 'core/clientes.html')
+
+
+def relatorios(request):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    return render(request, 'core/relatorios.html')

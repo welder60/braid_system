@@ -43,4 +43,10 @@ urlpatterns = [
     path('admin-painel/acessos/criar/', views.acesso_criar, name='acesso_criar'),
     path('admin-painel/acessos/<uuid:pk>/editar/', views.acesso_editar, name='acesso_editar'),
     path('admin-painel/acessos/<uuid:pk>/excluir/', views.acesso_excluir, name='acesso_excluir'),
+
+    # Módulos principais
+    path('atendimentos/', views.atendimentos, name='atendimentos'),
+    path('custos/', views.custos, name='custos'),
+    path('clientes/', views.clientes, name='clientes'),
+    path('relatorios/', views.relatorios, name='relatorios'),
 ]

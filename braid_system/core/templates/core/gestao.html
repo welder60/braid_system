@@ -106,7 +106,68 @@
     main {
       flex: 1;
       padding: 2rem 1.5rem;
+      min-width: 0;
+      overflow-x: hidden;
     }
+
+    /* ── Cards grid ── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+      gap: 1.25rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(30,42,31,0.08);
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      text-decoration: none;
+      color: var(--color-forest);
+      border: 1.5px solid transparent;
+      transition: box-shadow 0.15s, border-color 0.15s, transform 0.12s;
+    }
+    .card:hover {
+      box-shadow: 0 6px 24px rgba(30,42,31,0.14);
+      border-color: var(--color-gold);
+      transform: translateY(-2px);
+    }
+    .card-icon {
+      flex-shrink: 0;
+      width: 52px;
+      height: 52px;
+      background: var(--color-moss);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-sand);
+    }
+    .card-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .card-body h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-forest);
+      margin-bottom: 0.2rem;
+    }
+    .card-body p {
+      font-size: 0.82rem;
+      color: var(--color-earth);
+      line-height: 1.4;
+    }
+    .card-arrow {
+      flex-shrink: 0;
+      color: var(--color-gold);
+      opacity: 0.7;
+    }
+    .card:hover .card-arrow { opacity: 1; }
   </style>
 </head>
 <body>
@@ -138,7 +199,61 @@
   </header>
 
   <main>
-    <!-- conteúdo será implementado futuramente -->
+    <div class="cards-grid">
+
+      <a href="{% url 'atendimentos' %}" class="card">
+        <div class="card-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h2>Atendimentos</h2>
+          <p>Gerencie os atendimentos do estabelecimento</p>
+        </div>
+        <svg class="card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+
+      <a href="{% url 'custos' %}" class="card">
+        <div class="card-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h2>Custos</h2>
+          <p>Acompanhe e controle os custos operacionais</p>
+        </div>
+        <svg class="card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+
+      <a href="{% url 'clientes' %}" class="card">
+        <div class="card-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h2>Clientes</h2>
+          <p>Visualize e gerencie sua base de clientes</p>
+        </div>
+        <svg class="card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+
+      <a href="{% url 'relatorios' %}" class="card">
+        <div class="card-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h2>Relatórios</h2>
+          <p>Acesse relatórios e análises do negócio</p>
+        </div>
+        <svg class="card-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+
+    </div>
   </main>
 
 </body>
