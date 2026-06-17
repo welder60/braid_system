@@ -36,7 +36,30 @@ def gestao(request):
 
 
 def perfil(request):
-    return render(request, 'core/perfil.html')
+    if not request.user.is_authenticated:
+        return redirect('home')
+
+    vinculos = (
+        EstabelecimentoUsuario.objects
+        .filter(usuario=request.user)
+        .select_related('estabelecimento')
+        .order_by('estabelecimento__nome')
+    )
+    estabelecimentos_usuario = [v.estabelecimento for v in vinculos]
+
+    if request.method == 'POST':
+        est_id = request.POST.get('estabelecimento_id', '').strip()
+        ids_validos = [str(e.pk) for e in estabelecimentos_usuario]
+        if est_id in ids_validos:
+            request.session['estabelecimento_ativo_id'] = est_id
+            messages.success(request, 'Estabelecimento atualizado.')
+        else:
+            messages.error(request, 'Estabelecimento inválido.')
+        return redirect('perfil')
+
+    return render(request, 'core/perfil.html', {
+        'estabelecimentos_usuario': estabelecimentos_usuario,
+    })
 
 
 def admin_painel(request):
