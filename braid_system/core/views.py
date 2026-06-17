@@ -30,6 +30,55 @@ def cadastro_estabelecimento(request):
     return render(request, 'core/cadastro_estabelecimento.html')
 
 
+# ── Estabelecimentos ───────────────────────────────────────────────────────────
+
+def _ctx_estabelecimentos(editando=None):
+    return {
+        'estabelecimentos': Estabelecimento.objects.order_by('nome'),
+        'total_estabelecimentos': Estabelecimento.objects.count(),
+        'editando': editando,
+    }
+
+
+def estabelecimentos(request):
+    return render(request, 'core/estabelecimentos.html', _ctx_estabelecimentos())
+
+
+def estabelecimento_criar(request):
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        if not nome:
+            messages.error(request, 'O nome é obrigatório.')
+        else:
+            Estabelecimento.objects.create(nome=nome)
+            messages.success(request, f'Estabelecimento "{nome}" criado com sucesso!')
+            return redirect('estabelecimentos')
+    return render(request, 'core/estabelecimentos.html', _ctx_estabelecimentos())
+
+
+def estabelecimento_editar(request, pk):
+    est = get_object_or_404(Estabelecimento, pk=pk)
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        if not nome:
+            messages.error(request, 'O nome é obrigatório.')
+        else:
+            est.nome = nome
+            est.save()
+            messages.success(request, f'Estabelecimento "{nome}" atualizado.')
+            return redirect('estabelecimentos')
+    return render(request, 'core/estabelecimentos.html', _ctx_estabelecimentos(editando=est))
+
+
+def estabelecimento_excluir(request, pk):
+    est = get_object_or_404(Estabelecimento, pk=pk)
+    if request.method == 'POST':
+        nome = est.nome
+        est.delete()
+        messages.success(request, f'Estabelecimento "{nome}" excluído.')
+    return redirect('estabelecimentos')
+
+
 # ── Categorias de Custo ────────────────────────────────────────────────────
 
 def _ctx_categorias(editando=None):

@@ -5,6 +5,12 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('gestao/', views.gestao, name='gestao'),
     path('estabelecimentos/novo/', views.cadastro_estabelecimento, name='cadastro_estabelecimento'),
+
+    # Estabelecimentos (admin CRUD)
+    path('admin-painel/estabelecimentos/', views.estabelecimentos, name='estabelecimentos'),
+    path('admin-painel/estabelecimentos/criar/', views.estabelecimento_criar, name='estabelecimento_criar'),
+    path('admin-painel/estabelecimentos/<uuid:pk>/editar/', views.estabelecimento_editar, name='estabelecimento_editar'),
+    path('admin-painel/estabelecimentos/<uuid:pk>/excluir/', views.estabelecimento_excluir, name='estabelecimento_excluir'),
     path('admin-painel/', views.admin_painel, name='admin_painel'),
 
     # Categorias de Custo
