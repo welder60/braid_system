@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -35,6 +36,7 @@
     header .logo-icon {
       width: 36px;
       height: 36px;
+      object-fit: contain;
     }
     header h1 {
       font-size: 1.25rem;
@@ -63,16 +65,11 @@
       align-items: center;
       gap: 1.5rem;
     }
-    .hero-icon {
-      width: 72px;
-      height: 72px;
-      background: var(--color-moss);
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .hero-logo {
+      width: 110px;
+      height: 110px;
+      object-fit: contain;
     }
-    .hero-icon svg { color: var(--color-sand); }
     .hero h2 {
       font-size: 1.6rem;
       font-weight: 700;
@@ -207,22 +204,13 @@
 <body>
 
   <header>
-    <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="36" height="36" rx="8" fill="#E7DAC1" fill-opacity="0.15"/>
-      <path d="M10 26 C10 20 14 16 18 18 C22 20 26 16 26 10" stroke="#E7DAC1" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M10 18 C10 14 13 12 16 13 C19 14 22 12 22 8" stroke="#C8A15A" stroke-width="2" stroke-linecap="round"/>
-    </svg>
+    <img class="logo-icon" src="{% static 'core/img/logo.png' %}" alt="Braid System logo" />
     <h1>Braid System</h1>
   </header>
 
   <main>
     <div class="hero">
-      <div class="hero-icon">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-      </div>
+      <img class="hero-logo" src="{% static 'core/img/logo.png' %}" alt="Braid System logo" />
 
       <div>
         <h2>Bem-vindo ao Braid</h2>
