@@ -64,3 +64,4 @@ site/
 # Distribution / packaging
 *.tar.gz
 *.whl
+*.bat
