@@ -1,560 +1,218 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Acessos a Estabelecimentos — Braid System</title>
-  <style>
-    :root {
-      --color-moss:      #2F3B2E;
-      --color-forest:    #1E2A1F;
-      --color-terracota: #8C4A2F;
-      --color-earth:     #5A3A20;
-      --color-gold:      #C8A15A;
-      --color-sand:      #E7DAC1;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--color-sand);
-      color: var(--color-forest);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+{% extends 'core/admin_base.html' %}
 
-    /* ── Header ── */
-    header {
-      background: var(--color-moss);
-      color: var(--color-sand);
-      padding: 1rem 1.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .header-left { display: flex; align-items: center; gap: 0.75rem; }
-    header .logo-icon { width: 36px; height: 36px; }
-    header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.02em; }
-    header .badge {
-      font-size: 0.7rem;
-      background: var(--color-terracota);
-      color: var(--color-sand);
-      padding: 0.2rem 0.55rem;
-      border-radius: 20px;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
+{% block title %}Acessos a Estabelecimentos{% endblock %}
 
-    /* ── Layout ── */
-    .layout { display: flex; flex: 1; }
+{% block nav_acessos %}class="active"{% endblock %}
 
-    /* ── Sidebar ── */
-    nav.sidebar {
-      width: 240px;
-      min-width: 240px;
-      background: var(--color-forest);
-      color: var(--color-sand);
-      display: flex;
-      flex-direction: column;
-      padding: 1.5rem 0;
-    }
-    .sidebar-section { margin-bottom: 1.5rem; }
-    .sidebar-section-title {
-      font-size: 0.65rem;
-      font-weight: 700;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--color-gold);
-      padding: 0 1.25rem 0.5rem;
-    }
-    .sidebar-menu { list-style: none; }
-    .sidebar-menu li a {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      padding: 0.65rem 1.25rem;
-      color: rgba(231, 218, 193, 0.75);
-      text-decoration: none;
-      font-size: 0.9rem;
-      transition: background 0.15s, color 0.15s;
-      border-left: 3px solid transparent;
-    }
-    .sidebar-menu li a:hover,
-    .sidebar-menu li a.active {
-      background: rgba(200, 161, 90, 0.12);
-      color: var(--color-sand);
-      border-left-color: var(--color-gold);
-    }
-    .sidebar-menu li a .icon { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
-    .sidebar-divider {
-      border: none;
-      border-top: 1px solid rgba(255,255,255,0.08);
-      margin: 0.5rem 1.25rem 1rem;
-    }
+{% block extra_styles %}
+  /* ── Badge de acesso ── */
+  .acesso-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.55rem;
+    border-radius: 20px;
+  }
+  .acesso-ver         { background: #e8f4fd; color: #1a6fa8; }
+  .acesso-editar      { background: #fef9ec; color: var(--color-earth); }
+  .acesso-administrar { background: #fde8e0; color: var(--color-terracota); }
 
-    /* ── Main ── */
-    main.content { flex: 1; padding: 2rem 2.5rem; }
-    .page-header {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      margin-bottom: 2rem;
-    }
-    .page-title { font-size: 1.4rem; font-weight: 700; color: var(--color-forest); }
-    .page-subtitle { font-size: 0.875rem; color: #666; margin-top: 0.2rem; }
+  .two-col { grid-template-columns: 1fr 1.8fr; }
+{% endblock %}
 
-    /* ── Botões ── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.55rem 1.1rem;
-      border-radius: 8px;
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: opacity 0.15s, filter 0.15s;
-      text-decoration: none;
-    }
-    .btn:hover { filter: brightness(1.1); }
-    .btn-primary   { background: var(--color-terracota); color: var(--color-sand); }
-    .btn-secondary { background: var(--color-moss); color: var(--color-sand); }
-    .btn-ghost     { background: transparent; color: var(--color-forest); border: 1px solid #ccc; }
-    .btn-danger    { background: #c0392b; color: #fff; }
-    .btn-sm        { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
-
-    /* ── Mensagens ── */
-    .messages { list-style: none; margin-bottom: 1.25rem; }
-    .messages li {
-      padding: 0.65rem 1rem;
-      border-radius: 8px;
-      font-size: 0.875rem;
-      margin-bottom: 0.5rem;
-    }
-    .messages li.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-    .messages li.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-
-    /* ── Grid de dois painéis ── */
-    .two-col {
-      display: grid;
-      grid-template-columns: 1fr 1.8fr;
-      gap: 1.5rem;
-      align-items: start;
-    }
-
-    /* ── Card ── */
-    .card {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(30,42,31,0.08);
-      overflow: hidden;
-    }
-    .card-header {
-      padding: 1rem 1.5rem;
-      border-bottom: 1px solid #f0ebe0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .card-header h3 { font-size: 1rem; font-weight: 700; color: var(--color-forest); }
-    .card-body { padding: 1.25rem 1.5rem; }
-
-    /* ── Formulário ── */
-    .form-group { margin-bottom: 1rem; }
-    .form-group label {
-      display: block;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: #555;
-      margin-bottom: 0.35rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .form-control {
-      width: 100%;
-      padding: 0.6rem 0.85rem;
-      border: 1px solid #d9cdb8;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      color: var(--color-forest);
-      background: #faf8f4;
-      transition: border-color 0.15s;
-    }
-    .form-control:focus {
-      outline: none;
-      border-color: var(--color-gold);
-      background: #fff;
-    }
-    select.form-control { appearance: auto; }
-    .form-hint { font-size: 0.75rem; color: #aaa; margin-top: 0.25rem; }
-    .form-actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
-
-    /* ── Tabela ── */
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-    thead th {
-      background: #f5f0e8;
-      color: #777;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-      padding: 0.7rem 1rem;
-      text-align: left;
-      border-bottom: 1px solid #e8dfc8;
-    }
-    tbody tr { border-bottom: 1px solid #f0ebe0; transition: background 0.1s; }
-    tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: #faf8f4; }
-    tbody td { padding: 0.75rem 1rem; vertical-align: middle; }
-    .td-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
-
-    /* ── Badge de acesso ── */
-    .acesso-badge {
-      display: inline-block;
-      font-size: 0.7rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      padding: 0.2rem 0.55rem;
-      border-radius: 20px;
-    }
-    .acesso-ver          { background: #e8f4fd; color: #1a6fa8; }
-    .acesso-editar       { background: #fef9ec; color: var(--color-earth); }
-    .acesso-administrar  { background: #fde8e0; color: var(--color-terracota); }
-
-    /* ── Empty state ── */
-    .empty { text-align: center; padding: 2rem; color: #bbb; font-size: 0.875rem; }
-
-    /* ── Filtro ── */
-    .filtro-bar {
-      display: flex;
-      gap: 0.75rem;
-      padding: 0.75rem 1.5rem;
-      border-bottom: 1px solid #f0ebe0;
-      background: #faf8f4;
-    }
-    .filtro-bar select.form-control {
-      max-width: 220px;
-      padding: 0.45rem 0.75rem;
-    }
-
-    /* ── Modal de confirmação ── */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.45);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-overlay.open { display: flex; }
-    .modal {
-      background: #fff;
-      border-radius: 14px;
-      padding: 2rem;
-      max-width: 420px;
-      width: 90%;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
-    }
-    .modal h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.6rem; color: var(--color-forest); }
-    .modal p  { font-size: 0.875rem; color: #555; margin-bottom: 1.5rem; }
-    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
-
-    /* ── Footer ── */
-    footer {
-      background: var(--color-moss);
-      color: rgba(231,218,193,0.5);
-      text-align: center;
-      font-size: 0.75rem;
-      padding: 0.75rem;
-    }
-  </style>
-</head>
-<body>
-
-<!-- Header -->
-<header>
-  <div class="header-left">
-    <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="18" cy="18" r="18" fill="#C8A15A" opacity="0.2"/>
-      <path d="M10 26 Q18 10 26 26" stroke="#C8A15A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <circle cx="18" cy="14" r="3" fill="#C8A15A"/>
-    </svg>
-    <h1>Braid System</h1>
-    <span class="badge">Admin</span>
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">Acessos a Estabelecimentos</h2>
+      <p class="page-subtitle" style="margin-bottom:0">Gerencie quais usuários têm acesso a cada estabelecimento</p>
+    </div>
   </div>
-</header>
 
-<div class="layout">
+  {% if messages %}
+  <ul class="messages">
+    {% for msg in messages %}
+    <li class="{{ msg.tags }}">{{ msg }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
 
-  <!-- Sidebar -->
-  <nav class="sidebar">
-    <div class="sidebar-section">
-      <p class="sidebar-section-title">Geral</p>
-      <ul class="sidebar-menu">
-        <li><a href="{% url 'admin_painel' %}"><span class="icon">🏠</span> Dashboard</a></li>
-      </ul>
-    </div>
+  <div class="two-col">
 
-    <hr class="sidebar-divider">
-
-    <div class="sidebar-section">
-      <p class="sidebar-section-title">Financeiro</p>
-      <ul class="sidebar-menu">
-        <li><a href="{% url 'categorias_custo' %}"><span class="icon">🏷️</span> Categorias de Custo</a></li>
-      </ul>
-    </div>
-
-    <hr class="sidebar-divider">
-
-    <div class="sidebar-section">
-      <p class="sidebar-section-title">Atendimento</p>
-      <ul class="sidebar-menu">
-        <li><a href="{% url 'caracteristicas_atendimento' %}"><span class="icon">📋</span> Características</a></li>
-      </ul>
-    </div>
-
-    <hr class="sidebar-divider">
-
-    <div class="sidebar-section">
-      <p class="sidebar-section-title">Cadastros</p>
-      <ul class="sidebar-menu">
-        <li><a href="{% url 'estabelecimentos' %}"><span class="icon">🏢</span> Estabelecimentos</a></li>
-        <li><a href="{% url 'usuarios' %}"><span class="icon">👥</span> Usuários</a></li>
-        <li>
-          <a href="{% url 'acessos_estabelecimento' %}" class="active">
-            <span class="icon">🔑</span> Acessos
-          </a>
-        </li>
-        <li><a href="#"><span class="icon">⚙️</span> Configurações</a></li>
-      </ul>
-    </div>
-
-    <hr class="sidebar-divider">
-
-    <div class="sidebar-section">
-      <ul class="sidebar-menu">
-        <li><a href="{% url 'home' %}"><span class="icon">↩</span> Voltar ao site</a></li>
-      </ul>
-    </div>
-  </nav>
-
-  <!-- Conteúdo principal -->
-  <main class="content">
-
-    <div class="page-header">
-      <div>
-        <h2 class="page-title">Acessos a Estabelecimentos</h2>
-        <p class="page-subtitle">Gerencie quais usuários têm acesso a cada estabelecimento</p>
+    <!-- ── Painel esquerdo: formulário ── -->
+    <div class="card">
+      <div class="card-header">
+        <h3>{% if editando %}✏️ Editar Acesso{% else %}➕ Novo Acesso{% endif %}</h3>
       </div>
-    </div>
+      <div class="card-body">
+        <form method="post"
+          action="{% if editando %}{% url 'acesso_editar' editando.pk %}{% else %}{% url 'acesso_criar' %}{% endif %}">
+          {% csrf_token %}
 
-    <!-- Mensagens -->
-    {% if messages %}
-    <ul class="messages">
-      {% for msg in messages %}
-      <li class="{{ msg.tags }}">{{ msg }}</li>
-      {% endfor %}
-    </ul>
-    {% endif %}
-
-    <div class="two-col">
-
-      <!-- ── Painel esquerdo: formulário ── -->
-      <div class="card">
-        <div class="card-header">
-          <h3>
+          <div class="form-group">
+            <label for="usuario">Usuário</label>
+            <select id="usuario" name="usuario" class="form-control" required {% if editando %}disabled{% endif %}>
+              <option value="">Selecione…</option>
+              {% for u in usuarios %}
+              <option value="{{ u.pk }}"
+                {% if editando.usuario_id == u.pk %}selected{% endif %}
+                {% if not editando and usuario_selecionado == u.pk|stringformat:"s" %}selected{% endif %}>
+                {{ u.nome }} ({{ u.email }})
+              </option>
+              {% endfor %}
+            </select>
             {% if editando %}
-              ✏️ Editar Acesso
-            {% else %}
-              ➕ Novo Acesso
+            <p class="form-hint">O usuário não pode ser alterado após o vínculo ser criado.</p>
+            <input type="hidden" name="usuario" value="{{ editando.usuario_id }}">
             {% endif %}
-          </h3>
-        </div>
-        <div class="card-body">
-          <form
-            method="post"
-            action="{% if editando %}{% url 'acesso_editar' editando.pk %}{% else %}{% url 'acesso_criar' %}{% endif %}"
-          >
-            {% csrf_token %}
+          </div>
 
-            <div class="form-group">
-              <label for="usuario">Usuário</label>
-              <select id="usuario" name="usuario" class="form-control" required {% if editando %}disabled{% endif %}>
-                <option value="">Selecione…</option>
-                {% for u in usuarios %}
-                <option value="{{ u.pk }}"
-                  {% if editando.usuario_id == u.pk %}selected{% endif %}
-                  {% if not editando and usuario_selecionado == u.pk|stringformat:"s" %}selected{% endif %}
-                >{{ u.nome }} ({{ u.email }})</option>
-                {% endfor %}
-              </select>
-              {% if editando %}
-              <p class="form-hint">O usuário não pode ser alterado após o vínculo ser criado.</p>
-              <!-- campo oculto para manter o valor ao submeter -->
-              <input type="hidden" name="usuario" value="{{ editando.usuario_id }}">
-              {% endif %}
-            </div>
-
-            <div class="form-group">
-              <label for="estabelecimento">Estabelecimento</label>
-              <select id="estabelecimento" name="estabelecimento" class="form-control" required {% if editando %}disabled{% endif %}>
-                <option value="">Selecione…</option>
-                {% for e in estabelecimentos %}
-                <option value="{{ e.pk }}"
-                  {% if editando.estabelecimento_id == e.pk %}selected{% endif %}
-                  {% if not editando and estabelecimento_selecionado == e.pk|stringformat:"s" %}selected{% endif %}
-                >{{ e.nome }}</option>
-                {% endfor %}
-              </select>
-              {% if editando %}
-              <input type="hidden" name="estabelecimento" value="{{ editando.estabelecimento_id }}">
-              {% endif %}
-            </div>
-
-            <div class="form-group">
-              <label for="tipo_acesso">Nível de acesso</label>
-              <select id="tipo_acesso" name="tipo_acesso" class="form-control" required>
-                <option value="">Selecione…</option>
-                <option value="ver"         {% if editando.tipo_acesso == 'ver' %}selected{% endif %}>👁 Ver</option>
-                <option value="editar"      {% if editando.tipo_acesso == 'editar' %}selected{% endif %}>✏️ Editar</option>
-                <option value="administrar" {% if editando.tipo_acesso == 'administrar' %}selected{% endif %}>🔧 Administrar</option>
-              </select>
-              <p class="form-hint">
-                <strong>Ver</strong>: consulta somente leitura ·
-                <strong>Editar</strong>: pode alterar dados ·
-                <strong>Administrar</strong>: acesso completo
-              </p>
-            </div>
-
-            <div class="form-actions">
-              <button type="submit" class="btn btn-primary">
-                {% if editando %}💾 Salvar alterações{% else %}➕ Adicionar{% endif %}
-              </button>
-              {% if editando %}
-              <a href="{% url 'acessos_estabelecimento' %}" class="btn btn-ghost">Cancelar</a>
-              {% endif %}
-            </div>
-          </form>
-        </div>
-      </div>
-
-      <!-- ── Painel direito: lista ── -->
-      <div class="card">
-        <div class="card-header">
-          <h3>🔑 Acessos cadastrados</h3>
-          <span style="font-size:0.8rem;color:#aaa;">{{ total_acessos }} registro{{ total_acessos|pluralize:",s" }}</span>
-        </div>
-
-        <!-- Filtro -->
-        <form method="get" action="{% url 'acessos_estabelecimento' %}">
-          <div class="filtro-bar">
-            <select name="estabelecimento" class="form-control" onchange="this.form.submit()">
-              <option value="">Todos os estabelecimentos</option>
+          <div class="form-group">
+            <label for="estabelecimento">Estabelecimento</label>
+            <select id="estabelecimento" name="estabelecimento" class="form-control" required {% if editando %}disabled{% endif %}>
+              <option value="">Selecione…</option>
               {% for e in estabelecimentos %}
-              <option value="{{ e.pk }}" {% if filtro_estabelecimento == e.pk|stringformat:"s" %}selected{% endif %}>
+              <option value="{{ e.pk }}"
+                {% if editando.estabelecimento_id == e.pk %}selected{% endif %}
+                {% if not editando and estabelecimento_selecionado == e.pk|stringformat:"s" %}selected{% endif %}>
                 {{ e.nome }}
               </option>
               {% endfor %}
             </select>
-            <select name="usuario" class="form-control" onchange="this.form.submit()">
-              <option value="">Todos os usuários</option>
-              {% for u in usuarios %}
-              <option value="{{ u.pk }}" {% if filtro_usuario == u.pk|stringformat:"s" %}selected{% endif %}>
-                {{ u.nome }}
-              </option>
-              {% endfor %}
+            {% if editando %}
+            <input type="hidden" name="estabelecimento" value="{{ editando.estabelecimento_id }}">
+            {% endif %}
+          </div>
+
+          <div class="form-group">
+            <label for="tipo_acesso">Nível de acesso</label>
+            <select id="tipo_acesso" name="tipo_acesso" class="form-control" required>
+              <option value="">Selecione…</option>
+              <option value="ver"         {% if editando.tipo_acesso == 'ver' %}selected{% endif %}>👁 Ver</option>
+              <option value="editar"      {% if editando.tipo_acesso == 'editar' %}selected{% endif %}>✏️ Editar</option>
+              <option value="administrar" {% if editando.tipo_acesso == 'administrar' %}selected{% endif %}>🔧 Administrar</option>
             </select>
-            {% if filtro_estabelecimento or filtro_usuario %}
-            <a href="{% url 'acessos_estabelecimento' %}" class="btn btn-ghost btn-sm" style="white-space:nowrap;">✕ Limpar</a>
+            <p class="form-hint">
+              <strong>Ver</strong>: consulta somente leitura ·
+              <strong>Editar</strong>: pode alterar dados ·
+              <strong>Administrar</strong>: acesso completo
+            </p>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+              {% if editando %}💾 Salvar alterações{% else %}➕ Adicionar{% endif %}
+            </button>
+            {% if editando %}
+            <a href="{% url 'acessos_estabelecimento' %}" class="btn btn-ghost">Cancelar</a>
             {% endif %}
           </div>
         </form>
+      </div>
+    </div>
 
-        {% if acessos %}
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Usuário</th>
-                <th>Estabelecimento</th>
-                <th>Acesso</th>
-                <th>Incluído em</th>
-                <th style="text-align:right;">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for a in acessos %}
-              <tr>
-                <td>
-                  <strong>{{ a.usuario.nome }}</strong><br>
-                  <span style="font-size:0.8rem;color:#888;">{{ a.usuario.email }}</span>
-                </td>
-                <td>{{ a.estabelecimento.nome }}</td>
-                <td>
-                  <span class="acesso-badge acesso-{{ a.tipo_acesso }}">{{ a.get_tipo_acesso_display }}</span>
-                </td>
-                <td style="font-size:0.8rem;color:#888;">
-                  {{ a.data_inclusao|date:"d/m/Y" }}
-                  {% if a.incluido_por %}
-                  <br>por {{ a.incluido_por.nome }}
-                  {% endif %}
-                </td>
-                <td>
-                  <div class="td-actions">
-                    <a href="{% url 'acesso_editar' a.pk %}" class="btn btn-secondary btn-sm">✏️ Editar</a>
-                    <button
-                      class="btn btn-danger btn-sm"
-                      onclick="abrirModal('{{ a.pk }}', '{{ a.usuario.nome|escapejs }}', '{{ a.estabelecimento.nome|escapejs }}')"
-                    >🗑️ Excluir</button>
-                  </div>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div class="empty">
-          <p>Nenhum acesso cadastrado{% if filtro_estabelecimento or filtro_usuario %} para este filtro{% endif %}.</p>
-        </div>
-        {% endif %}
+    <!-- ── Painel direito: lista ── -->
+    <div class="card">
+      <div class="card-header">
+        <h3>🔑 Acessos cadastrados</h3>
+        <span style="font-size:0.8rem;color:#aaa;">{{ total_acessos }} registro{{ total_acessos|pluralize:",s" }}</span>
       </div>
 
-    </div><!-- /.two-col -->
-
-  </main>
-</div>
-
-<footer>Braid System &copy; 2026</footer>
-
-<!-- Modal de confirmação de exclusão -->
-<div class="modal-overlay" id="modal-excluir">
-  <div class="modal">
-    <h4>Confirmar exclusão</h4>
-    <p id="modal-msg">Deseja remover este acesso?</p>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
-      <form id="form-excluir" method="post" action="">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Excluir</button>
+      <form method="get" action="{% url 'acessos_estabelecimento' %}">
+        <div class="filtro-bar">
+          <select name="estabelecimento" class="form-control" onchange="this.form.submit()">
+            <option value="">Todos os estabelecimentos</option>
+            {% for e in estabelecimentos %}
+            <option value="{{ e.pk }}" {% if filtro_estabelecimento == e.pk|stringformat:"s" %}selected{% endif %}>
+              {{ e.nome }}
+            </option>
+            {% endfor %}
+          </select>
+          <select name="usuario" class="form-control" onchange="this.form.submit()">
+            <option value="">Todos os usuários</option>
+            {% for u in usuarios %}
+            <option value="{{ u.pk }}" {% if filtro_usuario == u.pk|stringformat:"s" %}selected{% endif %}>
+              {{ u.nome }}
+            </option>
+            {% endfor %}
+          </select>
+          {% if filtro_estabelecimento or filtro_usuario %}
+          <a href="{% url 'acessos_estabelecimento' %}" class="btn btn-ghost btn-sm" style="white-space:nowrap;">✕ Limpar</a>
+          {% endif %}
+        </div>
       </form>
+
+      {% if acessos %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Usuário</th>
+              <th>Estabelecimento</th>
+              <th>Acesso</th>
+              <th>Incluído em</th>
+              <th style="text-align:right;">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in acessos %}
+            <tr>
+              <td>
+                <strong>{{ a.usuario.nome }}</strong><br>
+                <span style="font-size:0.8rem;color:#888;">{{ a.usuario.email }}</span>
+              </td>
+              <td>{{ a.estabelecimento.nome }}</td>
+              <td><span class="acesso-badge acesso-{{ a.tipo_acesso }}">{{ a.get_tipo_acesso_display }}</span></td>
+              <td style="font-size:0.8rem;color:#888;">
+                {{ a.data_inclusao|date:"d/m/Y" }}
+                {% if a.incluido_por %}<br>por {{ a.incluido_por.nome }}{% endif %}
+              </td>
+              <td>
+                <div class="td-actions">
+                  <a href="{% url 'acesso_editar' a.pk %}" class="btn btn-secondary btn-sm">✏️ Editar</a>
+                  <button class="btn btn-danger btn-sm"
+                    onclick="abrirModal('{{ a.pk }}', '{{ a.usuario.nome|escapejs }}', '{{ a.estabelecimento.nome|escapejs }}')">🗑️ Excluir</button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty">
+        <p>Nenhum acesso cadastrado{% if filtro_estabelecimento or filtro_usuario %} para este filtro{% endif %}.</p>
+      </div>
+      {% endif %}
+    </div>
+
+  </div><!-- /.two-col -->
+
+  <!-- Modal de confirmação de exclusão -->
+  <div class="modal-overlay" id="modal-excluir">
+    <div class="modal">
+      <h4>Confirmar exclusão</h4>
+      <p id="modal-msg">Deseja remover este acesso?</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <form id="form-excluir" method="post" action="">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Excluir</button>
+        </form>
+      </div>
     </div>
   </div>
-</div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
   function abrirModal(pk, usuario, estabelecimento) {
     document.getElementById('modal-msg').textContent =
       'Deseja remover o acesso de "' + usuario + '" ao estabelecimento "' + estabelecimento + '"? Esta ação não pode ser desfeita.';
     document.getElementById('form-excluir').action =
       '{% url "acesso_excluir" "00000000-0000-0000-0000-000000000000" %}'.replace(
-        '00000000-0000-0000-0000-000000000000', pk
-      );
+        '00000000-0000-0000-0000-000000000000', pk);
     document.getElementById('modal-excluir').classList.add('open');
   }
   function fecharModal() {
@@ -564,6 +222,4 @@
     if (e.target === this) fecharModal();
   });
 </script>
-
-</body>
-</html>
+{% endblock %}

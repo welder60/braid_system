@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Administração{% endblock %} — Braid System</title>
+  <style>
+    :root {
+      --color-moss:      #2F3B2E;
+      --color-forest:    #1E2A1F;
+      --color-terracota: #8C4A2F;
+      --color-earth:     #5A3A20;
+      --color-gold:      #C8A15A;
+      --color-sand:      #E7DAC1;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--color-sand);
+      color: var(--color-forest);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--color-moss);
+      color: var(--color-sand);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    header .logo-icon {
+      width: 36px;
+      height: 36px;
+    }
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    header .badge {
+      font-size: 0.7rem;
+      background: var(--color-terracota);
+      color: var(--color-sand);
+      padding: 0.2rem 0.55rem;
+      border-radius: 20px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .header-greeting {
+      font-size: 0.85rem;
+      color: rgba(231,218,193,0.7);
+    }
+    .btn-perfil {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.825rem;
+      color: var(--color-sand);
+      text-decoration: none;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid rgba(231,218,193,0.3);
+      border-radius: 6px;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    .btn-perfil:hover {
+      background: rgba(231,218,193,0.1);
+      border-color: rgba(231,218,193,0.6);
+    }
+
+    /* ── Layout ── */
+    .layout {
+      display: flex;
+      flex: 1;
+    }
+
+    /* ── Sidebar ── */
+    nav.sidebar {
+      width: 240px;
+      min-width: 240px;
+      background: var(--color-forest);
+      color: var(--color-sand);
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem 0;
+    }
+    .sidebar-section {
+      margin-bottom: 1.5rem;
+    }
+    .sidebar-section-title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--color-gold);
+      padding: 0 1.25rem 0.5rem;
+    }
+    .sidebar-menu {
+      list-style: none;
+    }
+    .sidebar-menu li a {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.65rem 1.25rem;
+      color: rgba(231, 218, 193, 0.75);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: background 0.15s, color 0.15s;
+      border-left: 3px solid transparent;
+    }
+    .sidebar-menu li a:hover,
+    .sidebar-menu li a.active {
+      background: rgba(200, 161, 90, 0.12);
+      color: var(--color-sand);
+      border-left-color: var(--color-gold);
+    }
+    .sidebar-menu li a .icon {
+      font-size: 1rem;
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .sidebar-divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      margin: 0.5rem 1.25rem 1rem;
+    }
+
+    /* ── Main Content ── */
+    main.content {
+      flex: 1;
+      padding: 2rem 2.5rem;
+    }
+    .page-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+    .page-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--color-forest);
+      margin-bottom: 0.25rem;
+    }
+    .page-subtitle {
+      font-size: 0.875rem;
+      color: #666;
+      margin-top: 0.2rem;
+      margin-bottom: 2rem;
+    }
+
+    /* ── Botões ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, filter 0.15s, transform 0.1s;
+      text-decoration: none;
+    }
+    .btn:hover { filter: brightness(1.1); }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary   { background: var(--color-terracota); color: var(--color-sand); }
+    .btn-secondary { background: var(--color-moss); color: var(--color-sand); }
+    .btn-ghost     { background: transparent; color: var(--color-forest); border: 1px solid #ccc; }
+    .btn-danger    { background: #c0392b; color: #fff; }
+    .btn-sm        { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
+    .btn-icon {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.3rem;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .btn-icon:hover { background: rgba(0,0,0,0.06); }
+
+    /* ── Mensagens ── */
+    .messages { list-style: none; margin-bottom: 1.25rem; }
+    .messages li {
+      padding: 0.65rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+    .messages li.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .messages li.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+    /* ── Grid de dois painéis ── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1.6fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(30,42,31,0.08);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #f0ebe0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-header h3 { font-size: 1rem; font-weight: 700; color: var(--color-forest); }
+    .card-body { padding: 1.25rem 1.5rem; }
+
+    /* card estilo simples (sem overflow hidden, com padding) */
+    .card-plain {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(30,42,31,0.08);
+      padding: 1.5rem 2rem;
+      margin-bottom: 2rem;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--color-forest);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* ── Formulário ── */
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 0.35rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .form-control {
+      width: 100%;
+      padding: 0.6rem 0.85rem;
+      border: 1px solid #d9cdb8;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      color: var(--color-forest);
+      background: #faf8f4;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--color-gold);
+      background: #fff;
+    }
+    select.form-control { appearance: auto; }
+    textarea.form-control { resize: vertical; min-height: 80px; }
+    .form-hint { font-size: 0.75rem; color: #aaa; margin-top: 0.25rem; }
+    .form-actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+
+    /* form-grid (grid 2 colunas) */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem 1.5rem;
+    }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-group.flex { display: flex; flex-direction: column; gap: 0.35rem; }
+
+    /* checkbox */
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.5rem 0;
+    }
+    .checkbox-row input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--color-terracota);
+      cursor: pointer;
+    }
+    .checkbox-row label { font-size: 0.875rem; color: var(--color-forest); cursor: pointer; margin: 0; }
+
+    /* ── Tabela ── */
+    .table-wrap { overflow-x: auto; }
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .table-header h3 { font-size: 1rem; font-weight: 700; color: var(--color-forest); }
+    .badge-count {
+      background: var(--color-gold);
+      color: var(--color-forest);
+      border-radius: 20px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    thead th {
+      background: #f5f0e8;
+      color: #777;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 0.7rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e8dfc8;
+    }
+    /* thead escuro (variante usada em caracteristicas e opcoes) */
+    thead.dark th {
+      background: var(--color-forest);
+      color: var(--color-sand);
+      border-bottom: none;
+    }
+    thead.dark th:first-child { border-radius: 8px 0 0 0; }
+    thead.dark th:last-child  { border-radius: 0 8px 0 0; }
+    tbody tr { border-bottom: 1px solid #f0ebe0; transition: background 0.1s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #faf8f4; }
+    tbody td { padding: 0.75rem 1rem; vertical-align: middle; }
+    tbody td.actions { display: flex; gap: 0.4rem; align-items: center; }
+    .td-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+    /* ── Breadcrumb ── */
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 1.25rem;
+    }
+    .breadcrumb a { color: var(--color-terracota); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .breadcrumb .sep { color: #ccc; }
+
+    /* ── Filtro ── */
+    .filtro-bar {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid #f0ebe0;
+      background: #faf8f4;
+    }
+    .filtro-bar select.form-control {
+      max-width: 220px;
+      padding: 0.45rem 0.75rem;
+    }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 2rem; color: #bbb; font-size: 0.875rem; }
+    .empty-state { text-align: center; color: #bbb; padding: 2.5rem 1rem; }
+    .empty-state .ph-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+    .empty-state p { font-size: 0.9rem; }
+
+    /* ── Modal de confirmação ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      padding: 2rem;
+      max-width: 420px;
+      width: 90%;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    }
+    .modal h3, .modal h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.6rem; color: var(--color-forest); }
+    .modal p { font-size: 0.875rem; color: #555; margin-bottom: 1.5rem; }
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--color-moss);
+      color: rgba(231,218,193,0.5);
+      text-align: center;
+      font-size: 0.75rem;
+      padding: 0.75rem;
+    }
+
+    {% block extra_styles %}{% endblock %}
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="header-left">
+      <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="18" cy="18" r="18" fill="#C8A15A" opacity="0.2"/>
+        <path d="M10 26 Q18 10 26 26" stroke="#C8A15A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <circle cx="18" cy="14" r="3" fill="#C8A15A"/>
+      </svg>
+      <h1>Braid System</h1>
+      <span class="badge">Admin</span>
+    </div>
+    <div class="header-right">
+      {% if user.is_authenticated %}
+        <span class="header-greeting">Olá, {{ user.nome }}</span>
+        <a href="{% url 'perfil' %}" class="btn-perfil">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          Perfil
+        </a>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- Layout com sidebar -->
+  <div class="layout">
+
+    <!-- Sidebar / Menu -->
+    <nav class="sidebar">
+
+      <div class="sidebar-section">
+        <p class="sidebar-section-title">Geral</p>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="{% url 'admin_painel' %}" {% block nav_dashboard %}{% endblock %}>
+              <span class="icon">🏠</span> Dashboard
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section">
+        <p class="sidebar-section-title">Financeiro</p>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="{% url 'categorias_custo' %}" {% block nav_categorias_custo %}{% endblock %}>
+              <span class="icon">🏷️</span> Categorias de Custo
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section">
+        <p class="sidebar-section-title">Atendimento</p>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="{% url 'caracteristicas_atendimento' %}" {% block nav_caracteristicas %}{% endblock %}>
+              <span class="icon">📋</span> Características
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section">
+        <p class="sidebar-section-title">Cadastros</p>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="{% url 'estabelecimentos' %}" {% block nav_estabelecimentos %}{% endblock %}>
+              <span class="icon">🏢</span> Estabelecimentos
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'usuarios' %}" {% block nav_usuarios %}{% endblock %}>
+              <span class="icon">👥</span> Usuários
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'acessos_estabelecimento' %}" {% block nav_acessos %}{% endblock %}>
+              <span class="icon">🔑</span> Acessos
+            </a>
+          </li>
+          <li>
+            <a href="#" {% block nav_configuracoes %}{% endblock %}>
+              <span class="icon">⚙️</span> Configurações
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <hr class="sidebar-divider">
+
+      <div class="sidebar-section">
+        <ul class="sidebar-menu">
+          <li><a href="{% url 'home' %}"><span class="icon">↩</span> Voltar ao site</a></li>
+        </ul>
+      </div>
+
+    </nav>
+
+    <!-- Conteúdo principal -->
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+
+  <footer>
+    Braid System &copy; 2026
+  </footer>
+
+  {% block extra_scripts %}{% endblock %}
+
+</body>
+</html>
