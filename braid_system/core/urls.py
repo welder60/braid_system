@@ -9,6 +9,12 @@ urlpatterns = [
     path('perfil/', views.perfil, name='perfil'),
     path('estabelecimentos/novo/', views.cadastro_estabelecimento, name='cadastro_estabelecimento'),
 
+    # Usuários (admin CRUD)
+    path('admin-painel/usuarios/', views.usuarios, name='usuarios'),
+    path('admin-painel/usuarios/criar/', views.usuario_criar, name='usuario_criar'),
+    path('admin-painel/usuarios/<uuid:pk>/editar/', views.usuario_editar, name='usuario_editar'),
+    path('admin-painel/usuarios/<uuid:pk>/excluir/', views.usuario_excluir, name='usuario_excluir'),
+
     # Estabelecimentos (admin CRUD)
     path('admin-painel/estabelecimentos/', views.estabelecimentos, name='estabelecimentos'),
     path('admin-painel/estabelecimentos/criar/', views.estabelecimento_criar, name='estabelecimento_criar'),

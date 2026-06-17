@@ -5,6 +5,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.core.files.storage import default_storage
 from django.conf import settings
 from .models import Estabelecimento, CategoriaCusto, CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao
+from braid_system.security.models.usuario import Usuario
 
 
 def home(request):
@@ -361,3 +362,66 @@ def opcao_caracteristica_excluir(request, pk, opcao_pk):
         opcao.delete()
         messages.success(request, f'Opção "{nome}" excluída.')
     return redirect('caracteristica_atendimento_opcoes', pk=pk)
+
+
+# ── Usuários ───────────────────────────────────────────────────────────────────
+
+def _ctx_usuarios(editando=None):
+    return {
+        'usuarios': Usuario.objects.order_by('nome'),
+        'total_usuarios': Usuario.objects.count(),
+        'editando': editando,
+    }
+
+
+def usuarios(request):
+    return render(request, 'core/usuarios.html', _ctx_usuarios())
+
+
+def usuario_criar(request):
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        email = request.POST.get('email', '').strip()
+        tipo = request.POST.get('tipo', '').strip()
+        password = request.POST.get('password', '')
+
+        if not nome or not email or not tipo or not password:
+            messages.error(request, 'Todos os campos são obrigatórios.')
+        elif Usuario.objects.filter(email=email).exists():
+            messages.error(request, f'Já existe um usuário com o e-mail "{email}".')
+        else:
+            Usuario.objects.create_user(email=email, nome=nome, password=password, tipo=tipo)
+            messages.success(request, f'Usuário "{nome}" criado com sucesso!')
+            return redirect('usuarios')
+
+    return render(request, 'core/usuarios.html', _ctx_usuarios())
+
+
+def usuario_editar(request, pk):
+    usuario = get_object_or_404(Usuario, pk=pk)
+
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        tipo = request.POST.get('tipo', '').strip()
+        ativo = request.POST.get('ativo', '1') == '1'
+
+        if not nome or not tipo:
+            messages.error(request, 'Nome e tipo são obrigatórios.')
+        else:
+            usuario.nome = nome
+            usuario.tipo = tipo
+            usuario.ativo = ativo
+            usuario.save()
+            messages.success(request, f'Usuário "{nome}" atualizado.')
+            return redirect('usuarios')
+
+    return render(request, 'core/usuarios.html', _ctx_usuarios(editando=usuario))
+
+
+def usuario_excluir(request, pk):
+    usuario = get_object_or_404(Usuario, pk=pk)
+    if request.method == 'POST':
+        nome = usuario.nome
+        usuario.delete()
+        messages.success(request, f'Usuário "{nome}" excluído.')
+    return redirect('usuarios')
