@@ -24,7 +24,7 @@ class EstabelecimentoUsuario(models.Model):
         db_column='id_estabelecimento',
     )
     usuario = models.ForeignKey(
-        'core.Usuario',
+        'security.Usuario',
         on_delete=models.CASCADE,
         related_name='estabelecimento_usuarios',
         db_column='id_usuario',

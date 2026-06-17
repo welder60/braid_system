@@ -1,4 +1,3 @@
-from .usuario import Usuario
 from .estabelecimento import Estabelecimento, EstabelecimentoUsuario
 from .cliente import Cliente
 from .atendimento import Atendimento, Pagamento
@@ -10,7 +9,6 @@ from .caracteristica import (
 from .custo import CategoriaCusto, Custo
 
 __all__ = [
-    'Usuario',
     'Estabelecimento',
     'EstabelecimentoUsuario',
     'Cliente',
