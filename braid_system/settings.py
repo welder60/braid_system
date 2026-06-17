@@ -27,6 +27,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['braidsystem-development.up.railway.app']
 
+CSRF_TRUSTED_ORIGINS = ['https://braidsystem-development.up.railway.app']
+
 
 # Application definition
 
