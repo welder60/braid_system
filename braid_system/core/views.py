@@ -11,6 +11,10 @@ def gestao(request):
     return render(request, 'core/gestao.html')
 
 
+def admin_painel(request):
+    return render(request, 'core/admin_painel.html')
+
+
 def cadastro_estabelecimento(request):
     if request.method == 'POST':
         nome = request.POST.get('nome', '').strip()
