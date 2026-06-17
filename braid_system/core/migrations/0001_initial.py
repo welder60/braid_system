@@ -64,6 +64,7 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('nome', models.CharField(max_length=255)),
                 ('ilustracao', models.CharField(blank=True, max_length=500)),
+                ('nivel_superior', models.ForeignKey(blank=True, db_column='id_nivel_superior', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='subcategorias', to='core.categoriacusto')),
             ],
             options={
                 'verbose_name': 'Tipo de Custo',

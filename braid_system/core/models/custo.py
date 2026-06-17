@@ -6,6 +6,14 @@ class CategoriaCusto(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     nome = models.CharField(max_length=255)
     ilustracao = models.CharField(max_length=500, blank=True)
+    nivel_superior = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='subcategorias',
+        db_column='id_nivel_superior',
+    )
 
     class Meta:
         db_table = 'tipo_custo'
