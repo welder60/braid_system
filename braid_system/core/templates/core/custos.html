@@ -6,11 +6,13 @@
   <title>Custos — Braid System</title>
   <style>
     :root {
-      --color-moss:      #2F3B2E;
-      --color-forest:    #1E2A1F;
-      --color-earth:     #5A3A20;
-      --color-gold:      #C8A15A;
-      --color-sand:      #E7DAC1;
+      --color-moss:   #2F3B2E;
+      --color-forest: #1E2A1F;
+      --color-earth:  #5A3A20;
+      --color-gold:   #C8A15A;
+      --color-sand:   #E7DAC1;
+      --color-light:  #faf8f4;
+      --color-border: #d9cdb8;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -21,35 +23,448 @@
       display: flex;
       flex-direction: column;
     }
-    header {
+
+    /* Layout principal */
+    .page-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      height: calc(100vh - 56px);
+    }
+
+    /* Carrossel horizontal de meses */
+    .month-bar {
       background: var(--color-moss);
-      color: var(--color-sand);
-      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .month-arrow {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: rgba(231,218,193,0.6);
+      font-size: 1.1rem;
+      padding: 0 0.75rem;
+      height: 44px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: color 0.15s;
+    }
+    .month-arrow:hover { color: var(--color-sand); }
+    .month-track-wrap {
+      flex: 1;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-behavior: smooth;
+    }
+    .month-track-wrap::-webkit-scrollbar { display: none; }
+    .month-track {
+      display: flex;
+      gap: 0.25rem;
+      padding: 0.35rem 0.25rem;
+    }
+    .month-btn {
+      flex-shrink: 0;
+      padding: 0.35rem 0.85rem;
+      border-radius: 20px;
+      border: none;
+      background: transparent;
+      color: rgba(231,218,193,0.55);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-align: center;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+      text-transform: uppercase;
+      display: block;
+    }
+    .month-btn:hover { background: rgba(200,161,90,0.18); color: var(--color-sand); }
+    .month-btn.active { background: var(--color-gold); color: var(--color-forest); font-weight: 700; }
+
+    /* Area principal */
+    .main-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 1.5rem 2rem;
+      min-width: 0;
+    }
+
+    /* Cabecalho do mes */
+    .mes-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
     }
-    .header-left { display: flex; align-items: center; gap: 0.75rem; }
-    header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: 0.02em; }
-    .btn-back {
-      font-size: 0.825rem;
-      color: var(--color-sand);
-      opacity: 0.7;
-      text-decoration: none;
-      padding: 0.35rem 0.75rem;
-      border: 1px solid rgba(231,218,193,0.3);
-      border-radius: 6px;
+    .mes-titulo { font-size: 1.15rem; font-weight: 700; text-transform: capitalize; color: var(--color-forest); }
+    .mes-total  { font-size: 0.9rem; color: var(--color-earth); font-weight: 600; }
+    .btn-novo {
+      background: var(--color-gold);
+      color: var(--color-forest);
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
       transition: opacity 0.15s;
     }
-    .btn-back:hover { opacity: 1; }
-    main { flex: 1; padding: 2rem 1.5rem; }
+    .btn-novo:hover { opacity: 0.85; }
+
+    /* Toast */
+    .messages { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+    .messages li { padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.83rem; background: #f0eade; border-left: 3px solid var(--color-gold); }
+    .messages li.error   { border-left-color: #c0392b; background: #fdf0ee; color: #7b2318; }
+    .messages li.success { border-left-color: #27ae60; background: #edfbf3; color: #1a5c36; }
+
+    /* Formulario */
+    .form-card {
+      background: #fff;
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 1.25rem 1.25rem 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .form-card h2 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--color-moss);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .form-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 0.25rem; flex: 1 1 160px; min-width: 0; }
+    .form-group.full { flex: 1 1 100%; }
+    .form-group label { font-size: 0.75rem; font-weight: 600; color: var(--color-earth); }
+    .form-group input,
+    .form-group select {
+      padding: 0.5rem 0.7rem;
+      border: 1px solid var(--color-border);
+      border-radius: 7px;
+      font-size: 0.85rem;
+      background: var(--color-light);
+      color: var(--color-forest);
+      width: 100%;
+      transition: border-color 0.15s;
+    }
+    .form-group input:focus,
+    .form-group select:focus { outline: none; border-color: var(--color-gold); }
+    .form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.9rem; }
+    .btn-salvar {
+      background: var(--color-moss);
+      color: var(--color-sand);
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1.1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-salvar:hover { opacity: 0.85; }
+    .btn-cancelar {
+      background: transparent;
+      color: var(--color-earth);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+    }
+    .btn-cancelar:hover { background: var(--color-sand); }
+
+    /* Tabela */
+    .table-wrap { background: #fff; border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; }
+    .table-empty { padding: 2.5rem; text-align: center; color: rgba(30,42,31,0.4); font-size: 0.88rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    thead { background: var(--color-moss); color: var(--color-sand); }
+    thead th { padding: 0.65rem 1rem; text-align: left; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
+    tbody tr { border-bottom: 1px solid var(--color-border); transition: background 0.12s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #fdf9f2; }
+    tbody td { padding: 0.7rem 1rem; vertical-align: middle; }
+    .td-valor { font-weight: 700; color: var(--color-earth); white-space: nowrap; }
+    .td-data  { white-space: nowrap; color: rgba(30,42,31,0.6); font-size: 0.8rem; }
+    .td-cat   { font-size: 0.78rem; color: rgba(30,42,31,0.55); }
+    .td-acoes { white-space: nowrap; }
+    .btn-edit, .btn-del {
+      border: none; border-radius: 6px; padding: 0.3rem 0.6rem;
+      font-size: 0.75rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block;
+    }
+    .btn-edit { background: rgba(200,161,90,0.18); color: var(--color-earth); }
+    .btn-edit:hover { background: rgba(200,161,90,0.38); }
+    .btn-del  { background: rgba(192,57,43,0.1); color: #c0392b; margin-left: 0.3rem; }
+    .btn-del:hover { background: rgba(192,57,43,0.22); }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: #fff; border-radius: 14px; padding: 1.75rem 1.5rem 1.25rem; max-width: 380px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+    .modal-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .modal-box p  { font-size: 0.85rem; color: rgba(30,42,31,0.65); margin-bottom: 1.25rem; }
+    .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+    .btn-danger { background: #c0392b; color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
+    .btn-danger:hover { opacity: 0.88; }
+
+    /* Sem estabelecimento */
+    .no-est { text-align: center; padding: 3rem 1rem; color: rgba(30,42,31,0.5); }
+    .no-est a { color: var(--color-gold); text-decoration: none; font-weight: 600; }
+    .no-est strong { color: var(--color-forest); display: block; margin-bottom: 0.4rem; font-size: 1rem; }
   </style>
 </head>
 <body>
-  {% include 'core/_navbar.html' with navbar_title="Custos" navbar_show_back=True navbar_back_named_url="gestao" navbar_show_user=False %}
-  <main>
-    <!-- conteúdo será implementado futuramente -->
-  </main>
+  {% include 'core/_navbar.html' with navbar_title="Custos" navbar_show_back=True navbar_back_named_url="gestao" %}
+
+  <div class="page-body">
+
+    <!-- Carrossel horizontal de meses -->
+    <div class="month-bar">
+      <button class="month-arrow" id="arrowPrev" title="Mês anterior">&#8249;</button>
+      <div class="month-track-wrap" id="trackWrap">
+        <div class="month-track" id="monthTrack">
+          {% for m in meses %}
+            <a class="month-btn {% if m.mes == mes_ativo and m.ano == ano_ativo %}active{% endif %}"
+               href="?mes={{ m.mes }}&ano={{ m.ano }}"
+               data-active="{% if m.mes == mes_ativo and m.ano == ano_ativo %}1{% else %}0{% endif %}">
+              {{ m.label }}
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+      <button class="month-arrow" id="arrowNext" title="Próximo mês">&#8250;</button>
+    </div>
+
+    <!-- Area principal -->
+    <div class="main-area">
+
+      {% if messages %}
+        <ul class="messages">
+          {% for msg in messages %}
+            <li class="{{ msg.tags }}">{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      {% if not estabelecimento_ativo %}
+        <div class="no-est">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-gold);margin-bottom:.75rem">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <strong>Nenhum estabelecimento selecionado.</strong>
+          <p>Para lançar custos, <a href="{% url 'perfil' %}">selecione um estabelecimento no perfil</a>.</p>
+        </div>
+
+      {% else %}
+
+        <div class="mes-header">
+          <div>
+            <div class="mes-titulo">{{ mes_label }}</div>
+            {% if custos %}
+              <div class="mes-total">Total: R$ {{ total_mes }}</div>
+            {% endif %}
+          </div>
+          <button class="btn-novo" onclick="toggleForm(true)">+ Novo custo</button>
+        </div>
+
+        {% if editando %}
+          <div class="form-card" id="formCard">
+            <h2>Editar Custo</h2>
+            <form method="post" action="{% url 'custo_editar' editando.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="mes" value="{{ mes_ativo }}">
+              <input type="hidden" name="ano" value="{{ ano_ativo }}">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Categoria *</label>
+                  <select name="categoria_custo" required>
+                    <option value="">Selecione…</option>
+                    {% for cat in categorias %}
+                      <option value="{{ cat.pk }}" {% if cat.pk == editando.categoria_custo.pk %}selected{% endif %}>{{ cat.nome }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Data *</label>
+                  <input type="date" name="data" value="{{ editando.data|date:'Y-m-d' }}" required>
+                </div>
+                <div class="form-group full">
+                  <label>Descrição</label>
+                  <input type="text" name="descricao" value="{{ editando.descricao }}" maxlength="255" placeholder="Opcional">
+                </div>
+                <div class="form-group">
+                  <label>Valor (R$) *</label>
+                  <input type="number" name="valor" value="{{ editando.valor }}" step="0.01" min="0.01" required>
+                </div>
+              </div>
+              <div class="form-actions">
+                <a href="?mes={{ mes_ativo }}&ano={{ ano_ativo }}" class="btn-cancelar">Cancelar</a>
+                <button type="submit" class="btn-salvar">Salvar alterações</button>
+              </div>
+            </form>
+          </div>
+
+        {% else %}
+          <div class="form-card" id="formCard" style="display:none">
+            <h2>Novo Custo</h2>
+            <form method="post" action="{% url 'custo_criar' %}">
+              {% csrf_token %}
+              <input type="hidden" name="mes" value="{{ mes_ativo }}">
+              <input type="hidden" name="ano" value="{{ ano_ativo }}">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Categoria *</label>
+                  <select name="categoria_custo" required>
+                    <option value="">Selecione…</option>
+                    {% for cat in categorias %}
+                      <option value="{{ cat.pk }}">{{ cat.nome }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Data *</label>
+                  <input type="date" name="data" id="dataInput" required>
+                </div>
+                <div class="form-group full">
+                  <label>Descrição</label>
+                  <input type="text" name="descricao" maxlength="255" placeholder="Opcional">
+                </div>
+                <div class="form-group">
+                  <label>Valor (R$) *</label>
+                  <input type="number" name="valor" step="0.01" min="0.01" placeholder="0,00" required>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="btn-cancelar" onclick="toggleForm(false)">Cancelar</button>
+                <button type="submit" class="btn-salvar">Lançar custo</button>
+              </div>
+            </form>
+          </div>
+        {% endif %}
+
+        <div class="table-wrap">
+          {% if not custos %}
+            <div class="table-empty">Nenhum custo lançado para {{ mes_label }}.</div>
+          {% else %}
+            <table>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Categoria</th>
+                  <th>Descrição</th>
+                  <th>Valor</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for custo in custos %}
+                  <tr>
+                    <td class="td-data">{{ custo.data|date:"d/m" }}</td>
+                    <td class="td-cat">{{ custo.categoria_custo.nome }}</td>
+                    <td>{{ custo.descricao|default:"—" }}</td>
+                    <td class="td-valor">R$ {{ custo.valor }}</td>
+                    <td class="td-acoes">
+                      <a class="btn-edit" href="{% url 'custo_editar' custo.pk %}?mes={{ mes_ativo }}&ano={{ ano_ativo }}">Editar</a>
+                      <button class="btn-del" onclick="abrirModal('{{ custo.pk }}','{{ custo.descricao|default:custo.categoria_custo.nome|escapejs }}')">Excluir</button>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% endif %}
+        </div>
+
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Modal de exclusao -->
+  <div class="modal-overlay" id="modalExcluir">
+    <div class="modal-box">
+      <h3>Excluir custo</h3>
+      <p id="modalDesc">Tem certeza que deseja excluir este custo?</p>
+      <div class="modal-actions">
+        <button class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+        <form id="formExcluir" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn-danger">Excluir</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Carrossel horizontal ---
+    const track   = document.getElementById('monthTrack');
+    const wrap    = document.getElementById('trackWrap');
+    const btnPrev = document.getElementById('arrowPrev');
+    const btnNext = document.getElementById('arrowNext');
+    const active  = track ? track.querySelector('[data-active="1"]') : null;
+
+    // Centraliza o mês ativo sem animação ao carregar
+    function centerActive() {
+      if (!active || !wrap) return;
+      const itemLeft  = active.offsetLeft;
+      const itemWidth = active.offsetWidth;
+      const wrapWidth = wrap.clientWidth;
+      const target    = Math.max(0, itemLeft - wrapWidth / 2 + itemWidth / 2);
+      wrap.scrollLeft = target;
+    }
+    centerActive();
+
+    // Setas: navegam para o mês anterior / próximo
+    if (btnPrev) btnPrev.addEventListener('click', () => {
+      const prev = active ? active.previousElementSibling : null;
+      if (prev) prev.click();
+    });
+    if (btnNext) btnNext.addEventListener('click', () => {
+      const next = active ? active.nextElementSibling : null;
+      if (next) next.click();
+    });
+
+    // Data padrao = hoje
+    const di = document.getElementById('dataInput');
+    if (di) di.value = '{{ hoje }}';
+
+    function toggleForm(show) {
+      const card = document.getElementById('formCard');
+      if (!card) return;
+      card.style.display = show ? '' : 'none';
+      if (show) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function abrirModal(pk, desc) {
+      document.getElementById('modalDesc').textContent = 'Tem certeza que deseja excluir "' + desc + '"?';
+      document.getElementById('formExcluir').action = '/custos/' + pk + '/excluir/';
+      document.getElementById('modalExcluir').classList.add('open');
+    }
+
+    function fecharModal() {
+      document.getElementById('modalExcluir').classList.remove('open');
+    }
+
+    document.getElementById('modalExcluir').addEventListener('click', function(e) {
+      if (e.target === this) fecharModal();
+    });
+  </script>
 </body>
 </html>

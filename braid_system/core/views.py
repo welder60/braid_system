@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.files.storage import default_storage
 from django.conf import settings
-from .models import Estabelecimento, EstabelecimentoUsuario, CategoriaCusto, CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao
+from .models import Estabelecimento, EstabelecimentoUsuario, CategoriaCusto, CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao, Custo
 from braid_system.security.models.usuario import Usuario
 
 
@@ -547,10 +547,168 @@ def atendimentos(request):
     return render(request, 'core/atendimentos.html')
 
 
+def _get_estabelecimento_ativo(request):
+    """Retorna o Estabelecimento ativo da sessão ou None."""
+    est_id = request.session.get('estabelecimento_ativo_id')
+    if not est_id:
+        return None
+    try:
+        return Estabelecimento.objects.get(pk=est_id)
+    except Estabelecimento.DoesNotExist:
+        return None
+
+
+def _ctx_custos(request, editando=None, mes=None, ano=None):
+    from datetime import date, datetime
+    import calendar
+
+    estabelecimento = _get_estabelecimento_ativo(request)
+    hoje = date.today()
+    ano = ano or hoje.year
+    mes = mes or hoje.month
+
+    meses = []
+    for delta in range(-6, 7):
+        m = mes + delta
+        y = ano
+        while m < 1:
+            m += 12
+            y -= 1
+        while m > 12:
+            m -= 12
+            y += 1
+        MESES_PT = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+        meses.append({'mes': m, 'ano': y, 'label': f"{MESES_PT[m]}/{str(y)[2:]}"})
+
+    qs = Custo.objects.none()
+    total_mes = 0
+    categorias = CategoriaCusto.objects.filter(vinculado_atendimento=False).order_by('nome')
+
+    if estabelecimento:
+        qs = (
+            Custo.objects
+            .filter(
+                estabelecimento=estabelecimento,
+                atendimento__isnull=True,
+                data__year=ano,
+                data__month=mes,
+            )
+            .select_related('categoria_custo')
+            .order_by('-data', 'descricao')
+        )
+        total_mes = sum(c.valor for c in qs)
+
+    return {
+        'custos': qs,
+        'editando': editando,
+        'hoje': hoje.strftime('%Y-%m-%d'),
+        'mes_ativo': mes,
+        'ano_ativo': ano,
+        'meses': meses,
+        'total_mes': total_mes,
+        'categorias': categorias,
+        'mes_label': ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][mes] + f' de {ano}',
+    }
+
+
 def custos(request):
     if not request.user.is_authenticated:
         return redirect('home')
-    return render(request, 'core/custos.html')
+    mes = int(request.GET.get('mes', 0)) or None
+    ano = int(request.GET.get('ano', 0)) or None
+    return render(request, 'core/custos.html', _ctx_custos(request, mes=mes, ano=ano))
+
+
+def custo_criar(request):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    mes = int(request.POST.get('mes', 0)) or None
+    ano = int(request.POST.get('ano', 0)) or None
+
+    if request.method == 'POST':
+        estabelecimento = _get_estabelecimento_ativo(request)
+        if not estabelecimento:
+            messages.error(request, 'Selecione um estabelecimento no perfil antes de lançar custos.')
+            return redirect('custos')
+
+        categoria_id = request.POST.get('categoria_custo', '').strip()
+        descricao = request.POST.get('descricao', '').strip()
+        data_val = request.POST.get('data', '').strip()
+        valor = request.POST.get('valor', '').strip().replace(',', '.')
+
+        erros = []
+        if not categoria_id:
+            erros.append('Categoria é obrigatória.')
+        if not data_val:
+            erros.append('Data é obrigatória.')
+        if not valor:
+            erros.append('Valor é obrigatório.')
+
+        if not erros:
+            try:
+                categoria = CategoriaCusto.objects.get(pk=categoria_id, vinculado_atendimento=False)
+                Custo.objects.create(
+                    estabelecimento=estabelecimento,
+                    categoria_custo=categoria,
+                    descricao=descricao,
+                    data=data_val,
+                    valor=valor,
+                    atendimento=None,
+                )
+                messages.success(request, 'Custo lançado com sucesso.')
+            except CategoriaCusto.DoesNotExist:
+                messages.error(request, 'Categoria inválida.')
+            except Exception as exc:
+                messages.error(request, f'Erro ao salvar: {exc}')
+        else:
+            for e in erros:
+                messages.error(request, e)
+
+    return redirect(f'/custos/?mes={mes or ""}&ano={ano or ""}')
+
+
+def custo_editar(request, pk):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    custo = get_object_or_404(Custo, pk=pk, atendimento__isnull=True)
+    mes = int(request.GET.get('mes', custo.data.month))
+    ano = int(request.GET.get('ano', custo.data.year))
+
+    if request.method == 'POST':
+        mes = int(request.POST.get('mes', mes))
+        ano = int(request.POST.get('ano', ano))
+        categoria_id = request.POST.get('categoria_custo', '').strip()
+        descricao = request.POST.get('descricao', '').strip()
+        data_val = request.POST.get('data', '').strip()
+        valor = request.POST.get('valor', '').strip().replace(',', '.')
+
+        try:
+            custo.categoria_custo = CategoriaCusto.objects.get(pk=categoria_id, vinculado_atendimento=False)
+            custo.descricao = descricao
+            custo.data = data_val
+            custo.valor = valor
+            custo.save()
+            messages.success(request, 'Custo atualizado.')
+        except Exception as exc:
+            messages.error(request, f'Erro: {exc}')
+        return redirect(f'/custos/?mes={mes}&ano={ano}')
+
+    ctx = _ctx_custos(request, editando=custo, mes=mes, ano=ano)
+    return render(request, 'core/custos.html', ctx)
+
+
+def custo_excluir(request, pk):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    custo = get_object_or_404(Custo, pk=pk, atendimento__isnull=True)
+    mes = custo.data.month
+    ano = custo.data.year
+    if request.method == 'POST':
+        custo.delete()
+        messages.success(request, 'Custo removido.')
+    return redirect(f'/custos/?mes={mes}&ano={ano}')
 
 
 def clientes(request):

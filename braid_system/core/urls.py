@@ -9,13 +9,13 @@ urlpatterns = [
     path('perfil/', views.perfil, name='perfil'),
     path('estabelecimentos/novo/', views.cadastro_estabelecimento, name='cadastro_estabelecimento'),
 
-    # Usuários (admin CRUD)
+    # Usuarios
     path('admin-painel/usuarios/', views.usuarios, name='usuarios'),
     path('admin-painel/usuarios/criar/', views.usuario_criar, name='usuario_criar'),
     path('admin-painel/usuarios/<uuid:pk>/editar/', views.usuario_editar, name='usuario_editar'),
     path('admin-painel/usuarios/<uuid:pk>/excluir/', views.usuario_excluir, name='usuario_excluir'),
 
-    # Estabelecimentos (admin CRUD)
+    # Estabelecimentos
     path('admin-painel/estabelecimentos/', views.estabelecimentos, name='estabelecimentos'),
     path('admin-painel/estabelecimentos/criar/', views.estabelecimento_criar, name='estabelecimento_criar'),
     path('admin-painel/estabelecimentos/<uuid:pk>/editar/', views.estabelecimento_editar, name='estabelecimento_editar'),
@@ -28,7 +28,7 @@ urlpatterns = [
     path('admin-painel/categorias-custo/<uuid:pk>/editar/', views.categoria_custo_editar, name='categoria_custo_editar'),
     path('admin-painel/categorias-custo/<uuid:pk>/excluir/', views.categoria_custo_excluir, name='categoria_custo_excluir'),
 
-    # Características de Atendimento
+    # Caracteristicas de Atendimento
     path('admin-painel/caracteristicas-atendimento/', views.caracteristicas_atendimento, name='caracteristicas_atendimento'),
     path('admin-painel/caracteristicas-atendimento/criar/', views.caracteristica_atendimento_criar, name='caracteristica_atendimento_criar'),
     path('admin-painel/caracteristicas-atendimento/<uuid:pk>/editar/', views.caracteristica_atendimento_editar, name='caracteristica_atendimento_editar'),
@@ -38,15 +38,18 @@ urlpatterns = [
     path('admin-painel/caracteristicas-atendimento/<uuid:pk>/opcoes/<uuid:opcao_pk>/editar/', views.opcao_caracteristica_editar, name='opcao_caracteristica_editar'),
     path('admin-painel/caracteristicas-atendimento/<uuid:pk>/opcoes/<uuid:opcao_pk>/excluir/', views.opcao_caracteristica_excluir, name='opcao_caracteristica_excluir'),
 
-    # Acessos de usuários a estabelecimentos
+    # Acessos
     path('admin-painel/acessos/', views.acessos_estabelecimento, name='acessos_estabelecimento'),
     path('admin-painel/acessos/criar/', views.acesso_criar, name='acesso_criar'),
     path('admin-painel/acessos/<uuid:pk>/editar/', views.acesso_editar, name='acesso_editar'),
     path('admin-painel/acessos/<uuid:pk>/excluir/', views.acesso_excluir, name='acesso_excluir'),
 
-    # Módulos principais
+    # Modulos principais
     path('atendimentos/', views.atendimentos, name='atendimentos'),
     path('custos/', views.custos, name='custos'),
+    path('custos/criar/', views.custo_criar, name='custo_criar'),
+    path('custos/<uuid:pk>/editar/', views.custo_editar, name='custo_editar'),
+    path('custos/<uuid:pk>/excluir/', views.custo_excluir, name='custo_excluir'),
     path('clientes/', views.clientes, name='clientes'),
     path('relatorios/', views.relatorios, name='relatorios'),
 ]
