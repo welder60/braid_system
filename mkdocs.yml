@@ -6,3 +6,5 @@ nav:
   - Início: index.md
   - Produto:
       - Visão do Produto: braid-system-vision.md
+  - Design:
+      - Manual de Identidade Visual: manual-identidade-visual.md

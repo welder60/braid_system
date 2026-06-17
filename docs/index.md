@@ -23,6 +23,7 @@ O Braid System permite que trancistas autônomas e MEIs registrem atendimentos, 
 | Documento | Descrição |
 |---|---|
 | [Visão do Produto](braid-system-vision.md) | Propósito, escopo, partes interessadas, funcionalidades e restrições da v1.0 |
+| [Manual de Identidade Visual](manual-identidade-visual.md) | Paleta de cores, tipografia, tokens, acessibilidade e diretrizes de interface |
 
 ---
 
