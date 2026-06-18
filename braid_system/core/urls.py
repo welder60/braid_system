@@ -51,5 +51,8 @@ urlpatterns = [
     path('custos/<uuid:pk>/editar/', views.custo_editar, name='custo_editar'),
     path('custos/<uuid:pk>/excluir/', views.custo_excluir, name='custo_excluir'),
     path('clientes/', views.clientes, name='clientes'),
+    path('clientes/criar/', views.cliente_criar, name='cliente_criar'),
+    path('clientes/<uuid:pk>/editar/', views.cliente_editar, name='cliente_editar'),
+    path('clientes/<uuid:pk>/excluir/', views.cliente_excluir, name='cliente_excluir'),
     path('relatorios/', views.relatorios, name='relatorios'),
 ]

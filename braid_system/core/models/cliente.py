@@ -12,8 +12,6 @@ class Cliente(models.Model):
     )
     apelido = models.CharField(max_length=255, blank=True)
     descricao = models.TextField(blank=True)
-    # LGPD Compliance
-    consentimento_dados_sensiveis = models.BooleanField(default=False)
     anonimizado = models.BooleanField(default=False)
     data_cadastro = models.DateTimeField(auto_now_add=True)
 

@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.files.storage import default_storage
 from django.conf import settings
-from .models import Estabelecimento, EstabelecimentoUsuario, CategoriaCusto, CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao, Custo
+from .models import Estabelecimento, EstabelecimentoUsuario, CategoriaCusto, CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao, Custo, Cliente
 from braid_system.security.models.usuario import Usuario
 
 
@@ -711,10 +711,82 @@ def custo_excluir(request, pk):
     return redirect(f'/custos/?mes={mes}&ano={ano}')
 
 
+def _ctx_clientes(request, editando=None):
+    estabelecimento = _get_estabelecimento_ativo(request)
+    qs = Cliente.objects.none()
+    if estabelecimento:
+        qs = (
+            Cliente.objects
+            .filter(estabelecimento=estabelecimento, anonimizado=False)
+            .order_by('apelido', 'data_cadastro')
+        )
+    return {
+        'clientes': qs,
+        'total_clientes': qs.count(),
+        'editando': editando,
+    }
+
+
 def clientes(request):
     if not request.user.is_authenticated:
         return redirect('home')
-    return render(request, 'core/clientes.html')
+    return render(request, 'core/clientes.html', _ctx_clientes(request))
+
+
+def cliente_criar(request):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    if request.method == 'POST':
+        estabelecimento = _get_estabelecimento_ativo(request)
+        if not estabelecimento:
+            messages.error(request, 'Selecione um estabelecimento no perfil antes de cadastrar clientes.')
+            return redirect('clientes')
+
+        apelido = request.POST.get('apelido', '').strip()
+        descricao = request.POST.get('descricao', '').strip()
+
+        if not apelido:
+            messages.error(request, 'O apelido/nome é obrigatório.')
+        else:
+            Cliente.objects.create(
+                estabelecimento=estabelecimento,
+                apelido=apelido,
+                descricao=descricao,
+            )
+            messages.success(request, f'Cliente "{apelido}" cadastrado com sucesso!')
+    return redirect('clientes')
+
+
+def cliente_editar(request, pk):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    cliente = get_object_or_404(Cliente, pk=pk)
+
+    if request.method == 'POST':
+        apelido = request.POST.get('apelido', '').strip()
+        descricao = request.POST.get('descricao', '').strip()
+
+        if not apelido:
+            messages.error(request, 'O apelido/nome é obrigatório.')
+        else:
+            cliente.apelido = apelido
+            cliente.descricao = descricao
+            cliente.save()
+            messages.success(request, f'Cliente "{apelido}" atualizado.')
+            return redirect('clientes')
+
+    return render(request, 'core/clientes.html', _ctx_clientes(request, editando=cliente))
+
+
+def cliente_excluir(request, pk):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    cliente = get_object_or_404(Cliente, pk=pk)
+    if request.method == 'POST':
+        apelido = cliente.apelido
+        cliente.delete()
+        messages.success(request, f'Cliente "{apelido}" excluído.')
+    return redirect('clientes')
 
 
 def relatorios(request):

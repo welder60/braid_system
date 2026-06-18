@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-ob4gb3f75vfc7**7m&7bo8#kev+^nvdcf8$o#-_tgd@%c9^e#1
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['braidsystem-development.up.railway.app']
+ALLOWED_HOSTS = ['braidsystem-development.up.railway.app', '127.0.0.1', 'localhost']
 
 CSRF_TRUSTED_ORIGINS = ['https://braidsystem-development.up.railway.app']
 
