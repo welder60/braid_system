@@ -602,8 +602,30 @@ def _parse_dinheiro(raw):
         return None
 
 
-def _ctx_atendimentos(request, editando=None):
+def _ctx_atendimentos(request, editando=None, mes=None, ano=None):
+    from datetime import date as date_cls
     estabelecimento = _get_estabelecimento_ativo(request)
+
+    hoje = date_cls.today()
+    ano = ano or hoje.year
+    mes = mes or hoje.month
+
+    MESES_PT = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+    MESES_PT_FULL = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+
+    meses = []
+    for delta in range(-6, 7):
+        m = mes + delta
+        y = ano
+        while m < 1:
+            m += 12
+            y -= 1
+        while m > 12:
+            m -= 12
+            y += 1
+        meses.append({'mes': m, 'ano': y, 'label': f"{MESES_PT[m]}/{str(y)[2:]}"})
 
     atendimentos_lista = []
     clientes_qs = Cliente.objects.none()
@@ -618,7 +640,7 @@ def _ctx_atendimentos(request, editando=None):
 
         qs = (
             Atendimento.objects
-            .filter(estabelecimento=estabelecimento)
+            .filter(estabelecimento=estabelecimento, data__year=ano, data__month=mes)
             .select_related('cliente')
             .prefetch_related('pagamentos', 'caracteristicas__opcao', 'custos')
             .order_by('-data', '-hora')
@@ -679,13 +701,19 @@ def _ctx_atendimentos(request, editando=None):
         'editando': editando,
         'hoje': agora.strftime('%Y-%m-%d'),
         'agora': agora.strftime('%H:%M'),
+        'mes_ativo': mes,
+        'ano_ativo': ano,
+        'meses': meses,
+        'mes_label': f"{MESES_PT_FULL[mes]} de {ano}",
     }
 
 
 def atendimentos(request):
     if not request.user.is_authenticated:
         return redirect('home')
-    return render(request, 'core/atendimentos.html', _ctx_atendimentos(request))
+    mes = int(request.GET.get('mes') or 0) or None
+    ano = int(request.GET.get('ano') or 0) or None
+    return render(request, 'core/atendimentos.html', _ctx_atendimentos(request, mes=mes, ano=ano))
 
 
 def atendimento_criar(request):
@@ -790,7 +818,9 @@ def atendimento_criar(request):
     except Exception as exc:  # noqa: BLE001
         messages.error(request, f'Erro ao registrar atendimento: {exc}')
 
-    return redirect('atendimentos')
+    mes = int(request.POST.get('mes', 0)) or None
+    ano = int(request.POST.get('ano', 0)) or None
+    return redirect(f'/atendimentos/?mes={mes or ""}&ano={ano or ""}')
 
 
 def atendimento_editar(request, pk):
@@ -798,8 +828,12 @@ def atendimento_editar(request, pk):
         return redirect('home')
     estabelecimento = _get_estabelecimento_ativo(request)
     atendimento = get_object_or_404(Atendimento, pk=pk, estabelecimento=estabelecimento)
+    mes = int(request.GET.get('mes', atendimento.data.month))
+    ano = int(request.GET.get('ano', atendimento.data.year))
 
     if request.method == 'POST':
+        mes = int(request.POST.get('mes', mes))
+        ano = int(request.POST.get('ano', ano))
         cliente_id = request.POST.get('cliente_id', '').strip()
         data_val = request.POST.get('data', '').strip()
         hora_val = request.POST.get('hora', '').strip()
@@ -840,14 +874,14 @@ def atendimento_editar(request, pk):
                                 valor=pagamento_dec,
                             )
                 messages.success(request, 'Atendimento atualizado.')
-                return redirect('atendimentos')
+                return redirect(f'/atendimentos/?mes={mes}&ano={ano}')
             except Exception as exc:  # noqa: BLE001
                 messages.error(request, f'Erro ao atualizar: {exc}')
         else:
             for e in erros:
                 messages.error(request, e)
 
-    return render(request, 'core/atendimentos.html', _ctx_atendimentos(request, editando=atendimento))
+    return render(request, 'core/atendimentos.html', _ctx_atendimentos(request, editando=atendimento, mes=mes, ano=ano))
 
 
 def atendimento_excluir(request, pk):
@@ -855,10 +889,12 @@ def atendimento_excluir(request, pk):
         return redirect('home')
     estabelecimento = _get_estabelecimento_ativo(request)
     atendimento = get_object_or_404(Atendimento, pk=pk, estabelecimento=estabelecimento)
+    mes = atendimento.data.month
+    ano = atendimento.data.year
     if request.method == 'POST':
         atendimento.delete()
         messages.success(request, 'Atendimento removido.')
-    return redirect('atendimentos')
+    return redirect(f'/atendimentos/?mes={mes}&ano={ano}')
 
 
 def _get_estabelecimento_ativo(request):
