@@ -1,6 +1,6 @@
 from .estabelecimento import Estabelecimento, EstabelecimentoUsuario
 from .cliente import Cliente
-from .atendimento import Atendimento, Pagamento
+from .atendimento import Atendimento, FormaPagamento, Pagamento
 from .caracteristica import (
     CaracteristicaAtendimento,
     CaracteristicaAtendimentoOpcao,
@@ -13,6 +13,7 @@ __all__ = [
     'EstabelecimentoUsuario',
     'Cliente',
     'Atendimento',
+    'FormaPagamento',
     'Pagamento',
     'CaracteristicaAtendimento',
     'CaracteristicaAtendimentoOpcao',
