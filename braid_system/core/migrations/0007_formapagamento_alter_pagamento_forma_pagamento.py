@@ -1,5 +1,5 @@
 import uuid
-import django.db.models.deletion
+import django.db.models.deletion  # used by AddField
 from django.db import migrations, models
 
 
@@ -67,15 +67,5 @@ class Migration(migrations.Migration):
             model_name='pagamento',
             old_name='forma_pagamento_fk',
             new_name='forma_pagamento',
-        ),
-        migrations.AlterField(
-            model_name='pagamento',
-            name='forma_pagamento',
-            field=models.ForeignKey(
-                on_delete=django.db.models.deletion.PROTECT,
-                related_name='pagamentos',
-                db_column='id_forma_pagamento',
-                to='core.formapagamento',
-            ),
         ),
     ]
