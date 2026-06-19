@@ -46,6 +46,9 @@ urlpatterns = [
 
     # Modulos principais
     path('atendimentos/', views.atendimentos, name='atendimentos'),
+    path('atendimentos/criar/', views.atendimento_criar, name='atendimento_criar'),
+    path('atendimentos/<uuid:pk>/editar/', views.atendimento_editar, name='atendimento_editar'),
+    path('atendimentos/<uuid:pk>/excluir/', views.atendimento_excluir, name='atendimento_excluir'),
     path('custos/', views.custos, name='custos'),
     path('custos/criar/', views.custo_criar, name='custo_criar'),
     path('custos/<uuid:pk>/editar/', views.custo_editar, name='custo_editar'),

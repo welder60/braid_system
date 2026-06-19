@@ -1,10 +1,17 @@
 import os
+from decimal import Decimal, InvalidOperation
+from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.files.storage import default_storage
+from django.db import transaction
 from django.conf import settings
-from .models import Estabelecimento, EstabelecimentoUsuario, CategoriaCusto, CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao, Custo, Cliente
+from .models import (
+    Estabelecimento, EstabelecimentoUsuario, CategoriaCusto,
+    CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao, Custo, Cliente,
+    Atendimento, Pagamento, AtendimentoCaracteristica,
+)
 from braid_system.security.models.usuario import Usuario
 
 
@@ -541,10 +548,317 @@ def acesso_excluir(request, pk):
 
 # ── Módulos principais ─────────────────────────────────────────────────────────
 
+def _fmt_duracao(minutos):
+    """Formata minutos em 'Hh MMmin' / 'HH:MM' amigável."""
+    if not minutos:
+        return ''
+    h, m = divmod(int(minutos), 60)
+    if h and m:
+        return f'{h}h{m:02d}'
+    if h:
+        return f'{h}h'
+    return f'{m}min'
+
+
+def _parse_hora(valor):
+    """Aceita 'HH:MM' ou 'HH:MM:SS' e retorna datetime.time."""
+    valor = (valor or '').strip()
+    for fmt in ('%H:%M', '%H:%M:%S'):
+        try:
+            return datetime.strptime(valor, fmt).time()
+        except ValueError:
+            continue
+    return None
+
+
+def _duracao_para_minutos(valor):
+    """Converte 'HH:MM' em minutos inteiros. Retorna None se vazio/invalido."""
+    valor = (valor or '').strip()
+    if not valor:
+        return None
+    try:
+        partes = valor.split(':')
+        h = int(partes[0])
+        m = int(partes[1]) if len(partes) > 1 else 0
+        total = h * 60 + m
+        return total or None
+    except (ValueError, IndexError):
+        return None
+
+
+def _parse_dinheiro(raw):
+    """Converte texto monetario em Decimal. Aceita '120.50', '120,50' e '1.234,56'."""
+    raw = (raw or '').strip()
+    if not raw:
+        return None
+    if ',' in raw and '.' in raw:
+        # Formato BR: ponto de milhar, virgula decimal
+        raw = raw.replace('.', '').replace(',', '.')
+    elif ',' in raw:
+        raw = raw.replace(',', '.')
+    try:
+        return Decimal(raw)
+    except InvalidOperation:
+        return None
+
+
+def _ctx_atendimentos(request, editando=None):
+    estabelecimento = _get_estabelecimento_ativo(request)
+
+    atendimentos_lista = []
+    clientes_qs = Cliente.objects.none()
+    duracoes_sugeridas = []
+
+    if estabelecimento:
+        clientes_qs = (
+            Cliente.objects
+            .filter(estabelecimento=estabelecimento, anonimizado=False)
+            .order_by('apelido', 'data_cadastro')
+        )
+
+        qs = (
+            Atendimento.objects
+            .filter(estabelecimento=estabelecimento)
+            .select_related('cliente')
+            .prefetch_related('pagamentos', 'caracteristicas__opcao', 'custos')
+            .order_by('-data', '-hora')
+        )
+        for at in qs:
+            at.total_pago = sum((p.valor for p in at.pagamentos.all()), Decimal('0'))
+            at.duracao_fmt = _fmt_duracao(at.duracao)
+            at.caracteristica_nomes = [ac.opcao.nome for ac in at.caracteristicas.all()]
+            at.custos_total = sum((c.valor for c in at.custos.all()), Decimal('0'))
+            atendimentos_lista.append(at)
+
+        # Sugestoes de duracao a partir de atendimentos anteriores
+        minutos_distintos = (
+            Atendimento.objects
+            .filter(estabelecimento=estabelecimento, duracao__isnull=False)
+            .values_list('duracao', flat=True)
+            .distinct()
+        )
+        for mins in sorted({m for m in minutos_distintos if m}):
+            duracoes_sugeridas.append({
+                'min': mins,
+                'valor': f'{mins // 60:02d}:{mins % 60:02d}',
+                'label': _fmt_duracao(mins),
+            })
+
+    # Caracteristicas (ordenadas) com todas as opcoes para o wizard
+    caracteristicas = (
+        CaracteristicaAtendimento.objects
+        .prefetch_related('opcoes')
+        .order_by('ordem')
+    )
+
+    # Categorias de custo vinculadas a atendimento (uma etapa por categoria)
+    categorias_vinculadas = (
+        CategoriaCusto.objects
+        .filter(vinculado_atendimento=True)
+        .order_by('nome')
+    )
+
+    # Atributos calculados para o formulario de edicao
+    if editando is not None:
+        editando.total_pago = sum(
+            (p.valor for p in editando.pagamentos.all()), Decimal('0'),
+        )
+        editando.duracao_edit = (
+            f'{editando.duracao // 60:02d}:{editando.duracao % 60:02d}'
+            if editando.duracao else ''
+        )
+
+    agora = datetime.now()
+    return {
+        'atendimentos': atendimentos_lista,
+        'total_atendimentos': len(atendimentos_lista),
+        'clientes': clientes_qs,
+        'caracteristicas': caracteristicas,
+        'categorias_vinculadas': categorias_vinculadas,
+        'duracoes_sugeridas': duracoes_sugeridas,
+        'editando': editando,
+        'hoje': agora.strftime('%Y-%m-%d'),
+        'agora': agora.strftime('%H:%M'),
+    }
+
+
 def atendimentos(request):
     if not request.user.is_authenticated:
         return redirect('home')
-    return render(request, 'core/atendimentos.html')
+    return render(request, 'core/atendimentos.html', _ctx_atendimentos(request))
+
+
+def atendimento_criar(request):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    if request.method != 'POST':
+        return redirect('atendimentos')
+
+    estabelecimento = _get_estabelecimento_ativo(request)
+    if not estabelecimento:
+        messages.error(request, 'Selecione um estabelecimento no perfil antes de registrar atendimentos.')
+        return redirect('atendimentos')
+
+    cliente_id = request.POST.get('cliente_id', '').strip()
+    novo_cliente = request.POST.get('novo_cliente', '').strip()
+    data_val = request.POST.get('data', '').strip()
+    hora_val = request.POST.get('hora', '').strip()
+    duracao_val = request.POST.get('duracao', '').strip()
+    opcoes_ids = request.POST.getlist('opcoes')
+
+    # Validacao dos campos obrigatorios
+    erros = []
+    if not cliente_id and not novo_cliente:
+        erros.append('Informe o cliente do atendimento.')
+    if not data_val:
+        erros.append('A data do atendimento é obrigatória.')
+    hora_obj = _parse_hora(hora_val)
+    if not hora_obj:
+        erros.append('A hora do atendimento é obrigatória.')
+    try:
+        data_obj = datetime.strptime(data_val, '%Y-%m-%d').date()
+    except ValueError:
+        data_obj = None
+        if data_val:
+            erros.append('Data inválida.')
+    pagamento_dec = _parse_dinheiro(request.POST.get('pagamento_valor', ''))
+    if pagamento_dec is None or pagamento_dec < 0:
+        pagamento_dec = None
+        erros.append('Informe o valor total recebido pelo serviço.')
+
+    if erros:
+        for e in erros:
+            messages.error(request, e)
+        return redirect('atendimentos')
+
+    try:
+        with transaction.atomic():
+            # Cliente: existente ou novo (apenas pelo apelido)
+            if cliente_id:
+                cliente = get_object_or_404(Cliente, pk=cliente_id, estabelecimento=estabelecimento)
+            else:
+                cliente = Cliente.objects.create(
+                    estabelecimento=estabelecimento,
+                    apelido=novo_cliente,
+                )
+
+            atendimento = Atendimento.objects.create(
+                estabelecimento=estabelecimento,
+                cliente=cliente,
+                data=data_obj,
+                hora=hora_obj,
+                duracao=_duracao_para_minutos(duracao_val),
+            )
+
+            # Pagamento vinculado ao atendimento
+            Pagamento.objects.create(
+                atendimento=atendimento,
+                forma_pagamento='',
+                valor=pagamento_dec,
+            )
+
+            # Caracteristicas selecionadas (opcoes em qualquer nivel)
+            opcoes = CaracteristicaAtendimentoOpcao.objects.filter(pk__in=opcoes_ids)
+            for opcao in opcoes:
+                AtendimentoCaracteristica.objects.get_or_create(
+                    atendimento=atendimento, opcao=opcao,
+                )
+
+            # Custos relacionados (uma etapa por categoria vinculada)
+            for chave, bruto in request.POST.items():
+                if not chave.startswith('custo_'):
+                    continue
+                valor_custo = _parse_dinheiro(bruto)
+                if valor_custo is None or valor_custo <= 0:
+                    continue
+                cat_id = chave[len('custo_'):]
+                categoria = CategoriaCusto.objects.filter(
+                    pk=cat_id, vinculado_atendimento=True,
+                ).first()
+                if not categoria:
+                    continue
+                Custo.objects.create(
+                    estabelecimento=estabelecimento,
+                    categoria_custo=categoria,
+                    atendimento=atendimento,
+                    descricao=categoria.nome,
+                    data=data_obj,
+                    valor=valor_custo,
+                )
+
+        messages.success(request, f'Atendimento de "{cliente.apelido}" registrado com sucesso!')
+    except Exception as exc:  # noqa: BLE001
+        messages.error(request, f'Erro ao registrar atendimento: {exc}')
+
+    return redirect('atendimentos')
+
+
+def atendimento_editar(request, pk):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    estabelecimento = _get_estabelecimento_ativo(request)
+    atendimento = get_object_or_404(Atendimento, pk=pk, estabelecimento=estabelecimento)
+
+    if request.method == 'POST':
+        cliente_id = request.POST.get('cliente_id', '').strip()
+        data_val = request.POST.get('data', '').strip()
+        hora_val = request.POST.get('hora', '').strip()
+        duracao_val = request.POST.get('duracao', '').strip()
+
+        erros = []
+        hora_obj = _parse_hora(hora_val)
+        if not hora_obj:
+            erros.append('A hora é obrigatória.')
+        try:
+            data_obj = datetime.strptime(data_val, '%Y-%m-%d').date()
+        except ValueError:
+            data_obj = None
+            erros.append('Data inválida.')
+        pagamento_dec = _parse_dinheiro(request.POST.get('pagamento_valor', ''))
+
+        if not erros:
+            try:
+                with transaction.atomic():
+                    if cliente_id:
+                        atendimento.cliente = get_object_or_404(
+                            Cliente, pk=cliente_id, estabelecimento=estabelecimento,
+                        )
+                    atendimento.data = data_obj
+                    atendimento.hora = hora_obj
+                    atendimento.duracao = _duracao_para_minutos(duracao_val)
+                    atendimento.save()
+
+                    if pagamento_dec is not None:
+                        pagamento = atendimento.pagamentos.first()
+                        if pagamento:
+                            pagamento.valor = pagamento_dec
+                            pagamento.save()
+                        else:
+                            Pagamento.objects.create(
+                                atendimento=atendimento,
+                                forma_pagamento='',
+                                valor=pagamento_dec,
+                            )
+                messages.success(request, 'Atendimento atualizado.')
+                return redirect('atendimentos')
+            except Exception as exc:  # noqa: BLE001
+                messages.error(request, f'Erro ao atualizar: {exc}')
+        else:
+            for e in erros:
+                messages.error(request, e)
+
+    return render(request, 'core/atendimentos.html', _ctx_atendimentos(request, editando=atendimento))
+
+
+def atendimento_excluir(request, pk):
+    if not request.user.is_authenticated:
+        return redirect('home')
+    estabelecimento = _get_estabelecimento_ativo(request)
+    atendimento = get_object_or_404(Atendimento, pk=pk, estabelecimento=estabelecimento)
+    if request.method == 'POST':
+        atendimento.delete()
+        messages.success(request, 'Atendimento removido.')
+    return redirect('atendimentos')
 
 
 def _get_estabelecimento_ativo(request):

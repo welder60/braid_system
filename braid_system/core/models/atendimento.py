@@ -18,7 +18,11 @@ class Atendimento(models.Model):
     )
     data = models.DateField()
     hora = models.TimeField()
-    duracao = models.IntegerField(help_text='Duracao em minutos')
+    duracao = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Duracao em minutos',
+    )
 
     class Meta:
         db_table = 'atendimento'
@@ -37,7 +41,7 @@ class Pagamento(models.Model):
         related_name='pagamentos',
         db_column='id_atendimento',
     )
-    forma_pagamento = models.CharField(max_length=100)
+    forma_pagamento = models.CharField(max_length=100, blank=True)
     valor = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
