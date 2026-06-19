@@ -1,0 +1,20 @@
+[run]
+branch = True
+source = braid_system
+omit =
+    */migrations/*
+    */tests.py
+    */__pycache__/*
+    braid_system/wsgi.py
+    braid_system/asgi.py
+    braid_system/settings.py
+    braid_system/*_settings.py
+    manage.py
+    # Modelo duplicado e NAO utilizado (AUTH_USER_MODEL = 'security.Usuario').
+    # Codigo morto: nao e importado em core/models/__init__.py.
+    braid_system/core/models/usuario.py
+
+[report]
+show_missing = True
+skip_covered = False
+precision = 1

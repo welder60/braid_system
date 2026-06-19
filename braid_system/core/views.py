@@ -753,7 +753,7 @@ def atendimento_criar(request):
             # Pagamento vinculado ao atendimento
             Pagamento.objects.create(
                 atendimento=atendimento,
-                forma_pagamento='',
+                forma_pagamento=None,
                 valor=pagamento_dec,
             )
 
@@ -836,7 +836,7 @@ def atendimento_editar(request, pk):
                         else:
                             Pagamento.objects.create(
                                 atendimento=atendimento,
-                                forma_pagamento='',
+                                forma_pagamento=None,
                                 valor=pagamento_dec,
                             )
                 messages.success(request, 'Atendimento atualizado.')
@@ -930,8 +930,8 @@ def _ctx_custos(request, editando=None, mes=None, ano=None):
 def custos(request):
     if not request.user.is_authenticated:
         return redirect('home')
-    mes = int(request.GET.get('mes', 0)) or None
-    ano = int(request.GET.get('ano', 0)) or None
+    mes = int(request.GET.get('mes') or 0) or None
+    ano = int(request.GET.get('ano') or 0) or None
     return render(request, 'core/custos.html', _ctx_custos(request, mes=mes, ano=ano))
 
 

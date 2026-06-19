@@ -3,6 +3,28 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def copiar_formas_pagamento(apps, schema_editor):
+    """Migra os valores textuais de forma_pagamento para a nova tabela FormaPagamento.
+
+    Versao portavel (RunPython) que substitui o SQL especifico de PostgreSQL,
+    funcionando tambem em SQLite (usado em dev/testes).
+    """
+    Pagamento = apps.get_model('core', 'Pagamento')
+    FormaPagamento = apps.get_model('core', 'FormaPagamento')
+
+    formas_por_nome = {}
+    for pagamento in Pagamento.objects.all():
+        nome = (getattr(pagamento, 'forma_pagamento', '') or '').strip()
+        if not nome:
+            continue
+        forma = formas_por_nome.get(nome)
+        if forma is None:
+            forma, _ = FormaPagamento.objects.get_or_create(nome=nome)
+            formas_por_nome[nome] = forma
+        pagamento.forma_pagamento_fk = forma
+        pagamento.save(update_fields=['forma_pagamento_fk'])
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -33,20 +55,9 @@ class Migration(migrations.Migration):
                 to='core.formapagamento',
             ),
         ),
-        migrations.RunSQL(
-            sql="""
-                INSERT INTO forma_pagamento (id, nome)
-                SELECT gen_random_uuid(), forma_pagamento
-                FROM pagamento
-                WHERE forma_pagamento IS NOT NULL AND forma_pagamento <> ''
-                GROUP BY forma_pagamento;
-
-                UPDATE pagamento p
-                SET forma_pagamento_fk_id = fp.id
-                FROM forma_pagamento fp
-                WHERE p.forma_pagamento = fp.nome;
-            """,
-            reverse_sql=migrations.RunSQL.noop,
+        migrations.RunPython(
+            copiar_formas_pagamento,
+            reverse_code=migrations.RunPython.noop,
         ),
         migrations.RemoveField(
             model_name='pagamento',

@@ -59,6 +59,8 @@ class Pagamento(models.Model):
         on_delete=models.PROTECT,
         related_name='pagamentos',
         db_column='id_forma_pagamento',
+        null=True,
+        blank=True,
     )
     valor = models.DecimalField(max_digits=10, decimal_places=2)
 
@@ -68,4 +70,5 @@ class Pagamento(models.Model):
         verbose_name_plural = 'Pagamentos'
 
     def __str__(self):
-        return f'{self.atendimento} - {self.forma_pagamento}: R$ {self.valor}'
+        forma = self.forma_pagamento or 'sem forma'
+        return f'{self.atendimento} - {forma}: R$ {self.valor}'
