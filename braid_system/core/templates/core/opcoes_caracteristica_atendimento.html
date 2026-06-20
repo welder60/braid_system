@@ -98,7 +98,7 @@
       {% if editando %}✏️ Editar Opção{% else %}➕ Nova Opção{% endif %}
     </p>
 
-    <form method="post"
+    <form method="post" enctype="multipart/form-data"
       action="{% if editando %}{% url 'opcao_caracteristica_editar' caracteristica.pk editando.pk %}{% else %}{% url 'opcao_caracteristica_criar' caracteristica.pk %}{% endif %}">
       {% csrf_token %}
 
@@ -112,11 +112,25 @@
         </div>
 
         <div class="form-group flex">
-          <label for="ilustracao">Ilustração <span style="font-weight:400;text-transform:none">(emoji ou URL)</span></label>
+          <label for="ilustracao_arquivo">Ilustração</label>
+          {% if editando.ilustracao %}
+            <div style="margin-bottom:0.5rem;display:flex;align-items:center;gap:0.5rem;">
+              {% if editando.ilustracao|slice:":4" == "http" or editando.ilustracao|slice:":1" == "/" %}
+                <img src="{{ editando.ilustracao }}" alt="Ilustração atual" style="height:36px;width:36px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">
+              {% else %}
+                <span style="font-size:1.6rem;">{{ editando.ilustracao }}</span>
+              {% endif %}
+              <span style="font-size:0.75rem;color:#999;">atual</span>
+            </div>
+          {% endif %}
+          <input type="file" id="ilustracao_arquivo" name="ilustracao_arquivo"
+                 accept="image/*"
+                 style="padding:0.45rem 0.6rem;border:1.5px solid #ddd;border-radius:8px;font-size:0.85rem;font-family:inherit;background:#fff;cursor:pointer;">
+          <span class="hint" style="margin-top:0.3rem;">Selecione uma imagem do computador — ou use o campo abaixo para emoji / URL.</span>
           <input type="text" id="ilustracao" name="ilustracao" maxlength="500"
                  value="{{ editando.ilustracao|default:'' }}"
-                 placeholder="Ex: 🌀 ou https://...">
-          <span class="hint">Emoji ou link de imagem exibido junto à opção.</span>
+                 placeholder="Ex: 🌀 ou https://..."
+                 style="margin-top:0.4rem;">
         </div>
 
         <div class="form-group flex full">

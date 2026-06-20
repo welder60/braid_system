@@ -152,7 +152,7 @@ def categorias_custo(request):
     return render(request, 'core/categorias_custo.html', _ctx_categorias())
 
 
-def _salvar_ilustracao(request, atual=''):
+def _salvar_ilustracao(request, atual='', pasta='categorias_custo'):
     """
     Resolve o valor final do campo ilustracao.
     Prioridade: arquivo enviado > texto digitado > valor atual.
@@ -160,9 +160,8 @@ def _salvar_ilustracao(request, atual=''):
     """
     arquivo = request.FILES.get('ilustracao_arquivo')
     if arquivo:
-        # Salva em media/categorias_custo/<nome_original>
         caminho = default_storage.save(
-            os.path.join('categorias_custo', arquivo.name),
+            os.path.join(pasta, arquivo.name),
             arquivo,
         )
         return settings.MEDIA_URL + caminho
@@ -329,7 +328,7 @@ def opcao_caracteristica_criar(request, pk):
 
     if request.method == 'POST':
         nome = request.POST.get('nome', '').strip()
-        ilustracao = request.POST.get('ilustracao', '').strip()
+        ilustracao = _salvar_ilustracao(request, pasta='opcoes_caracteristica')
         nivel_superior_id = request.POST.get('nivel_superior') or None
 
         if not nome:
@@ -360,7 +359,7 @@ def opcao_caracteristica_editar(request, pk, opcao_pk):
 
     if request.method == 'POST':
         nome = request.POST.get('nome', '').strip()
-        ilustracao = request.POST.get('ilustracao', '').strip()
+        ilustracao = _salvar_ilustracao(request, atual=opcao.ilustracao, pasta='opcoes_caracteristica')
         nivel_superior_id = request.POST.get('nivel_superior') or None
 
         if not nome:
