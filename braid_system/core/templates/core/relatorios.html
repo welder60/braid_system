@@ -281,9 +281,11 @@
                   <div class="metric">
                     <div class="metric-top">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                      <span class="metric-label">Horas trabalhadas</span>
+                      <span class="metric-label">Duração média</span>
                     </div>
-                    <div class="metric-value">{{ m.total_horas }}</div>
+                    <div class="metric-value">
+                      {% if m.duracao_media %}{{ m.duracao_media }}{% else %}<span class="muted">—</span>{% endif %}
+                    </div>
                   </div>
 
                   <div class="metric">

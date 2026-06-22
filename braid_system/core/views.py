@@ -1223,6 +1223,7 @@ def relatorios(request):
 
             lucro_por_atend = (lucro / total_atend) if total_atend else None
             lucro_por_hora = (lucro / horas_dec) if horas_dec else None
+            duracao_media_min = round(total_min / total_atend) if total_atend else None
 
             relatorios_meses.append({
                 'ano': ano,
@@ -1230,7 +1231,7 @@ def relatorios(request):
                 'label_curto': f'{MESES_PT[mes]}/{str(ano)[2:]}',
                 'label_full': f'{MESES_PT_FULL[mes]} de {ano}',
                 'total_atendimentos': total_atend,
-                'total_horas': _fmt_horas_br(total_min),
+                'duracao_media': _fmt_horas_br(duracao_media_min) if duracao_media_min is not None else None,
                 'total_faturado': _fmt_money_br(faturado),
                 'total_custos': _fmt_money_br(custos_total),
                 'lucro_total': _fmt_money_br(lucro),
