@@ -1138,7 +1138,115 @@ def cliente_excluir(request, pk):
     return redirect('clientes')
 
 
+def _fmt_money_br(valor):
+    """Formata um Decimal/numero no padrao BR de milhar: 1.234,56 (sem prefixo)."""
+    valor = Decimal(valor or 0).quantize(Decimal('0.01'))
+    negativo = valor < 0
+    inteiro, dec = f'{abs(valor):.2f}'.split('.')
+    grupos = []
+    while len(inteiro) > 3:
+        grupos.insert(0, inteiro[-3:])
+        inteiro = inteiro[:-3]
+    grupos.insert(0, inteiro)
+    texto = '.'.join(grupos) + ',' + dec
+    return ('-' + texto) if negativo else texto
+
+
+def _fmt_horas_br(total_min):
+    """Converte minutos totais em 'Hh MMmin' amigavel."""
+    total_min = int(total_min or 0)
+    h, m = divmod(total_min, 60)
+    if h and m:
+        return f'{h}h{m:02d}'
+    if h:
+        return f'{h}h'
+    if m:
+        return f'{m}min'
+    return '0h'
+
+
 def relatorios(request):
+    from datetime import date as date_cls
+    from django.db.models import Sum, Count
+
     if not request.user.is_authenticated:
         return redirect('home')
-    return render(request, 'core/relatorios.html')
+
+    estabelecimento = _get_estabelecimento_ativo(request)
+
+    MESES_PT = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+    MESES_PT_FULL = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+
+    hoje = date_cls.today()
+    relatorios_meses = []
+    indice_inicial = 0
+
+    if estabelecimento:
+        # Conjunto de meses (ano, mes) que possuem atendimentos ou custos.
+        chaves = set()
+        for d in Atendimento.objects.filter(estabelecimento=estabelecimento).dates('data', 'month'):
+            chaves.add((d.year, d.month))
+        for d in Custo.objects.filter(estabelecimento=estabelecimento).dates('data', 'month'):
+            chaves.add((d.year, d.month))
+        chaves.add((hoje.year, hoje.month))  # garante o mes corrente no carrossel
+
+        for ano, mes in sorted(chaves):
+            at_agg = (
+                Atendimento.objects
+                .filter(estabelecimento=estabelecimento, data__year=ano, data__month=mes)
+                .aggregate(qtd=Count('id'), minutos=Sum('duracao'))
+            )
+            total_atend = at_agg['qtd'] or 0
+            total_min = at_agg['minutos'] or 0
+
+            faturado = (
+                Pagamento.objects
+                .filter(
+                    atendimento__estabelecimento=estabelecimento,
+                    atendimento__data__year=ano,
+                    atendimento__data__month=mes,
+                )
+                .aggregate(s=Sum('valor'))['s']
+            ) or Decimal('0')
+
+            # Total de custos = TODOS os custos do mes (avulsos + vinculados a atendimento)
+            custos_total = (
+                Custo.objects
+                .filter(estabelecimento=estabelecimento, data__year=ano, data__month=mes)
+                .aggregate(s=Sum('valor'))['s']
+            ) or Decimal('0')
+
+            lucro = faturado - custos_total
+            horas_dec = (Decimal(total_min) / Decimal(60)) if total_min else Decimal('0')
+
+            lucro_por_atend = (lucro / total_atend) if total_atend else None
+            lucro_por_hora = (lucro / horas_dec) if horas_dec else None
+
+            relatorios_meses.append({
+                'ano': ano,
+                'mes': mes,
+                'label_curto': f'{MESES_PT[mes]}/{str(ano)[2:]}',
+                'label_full': f'{MESES_PT_FULL[mes]} de {ano}',
+                'total_atendimentos': total_atend,
+                'total_horas': _fmt_horas_br(total_min),
+                'total_faturado': _fmt_money_br(faturado),
+                'total_custos': _fmt_money_br(custos_total),
+                'lucro_total': _fmt_money_br(lucro),
+                'lucro_positivo': lucro >= 0,
+                'lucro_por_atendimento': _fmt_money_br(lucro_por_atend) if lucro_por_atend is not None else None,
+                'lucro_por_hora': _fmt_money_br(lucro_por_hora) if lucro_por_hora is not None else None,
+            })
+
+        # Foca o mes corrente; se nao houver, o ultimo (mais recente).
+        indice_inicial = next(
+            (i for i, m in enumerate(relatorios_meses)
+             if m['ano'] == hoje.year and m['mes'] == hoje.month),
+            len(relatorios_meses) - 1 if relatorios_meses else 0,
+        )
+
+    return render(request, 'core/relatorios.html', {
+        'relatorios_meses': relatorios_meses,
+        'indice_inicial': indice_inicial,
+    })
