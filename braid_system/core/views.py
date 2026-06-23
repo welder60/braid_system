@@ -6,7 +6,6 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.core.files.storage import default_storage
 from django.db import transaction
-from django.conf import settings
 from .models import (
     Estabelecimento, EstabelecimentoUsuario, CategoriaCusto,
     CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao, Custo, Cliente,
@@ -164,7 +163,9 @@ def _salvar_ilustracao(request, atual='', pasta='categorias_custo'):
             os.path.join(pasta, arquivo.name),
             arquivo,
         )
-        return settings.MEDIA_URL + caminho
+        # URL resolvida pelo storage ativo: caminho local em desenvolvimento
+        # (FileSystemStorage) ou URL pública do Supabase em produção (S3).
+        return default_storage.url(caminho)
     texto = request.POST.get('ilustracao', '').strip()
     if texto:
         return texto

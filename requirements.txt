@@ -2,5 +2,15 @@ Django>=6.0.5
 gunicorn>=21.2.0
 whitenoise>=6.7.0
 
+# Banco de dados (produção: PostgreSQL / Supabase)
+psycopg[binary]>=3.2
+dj-database-url>=2.2.0
+
+# Variáveis de ambiente (.env)
+python-dotenv>=1.0.1
+
+# Storage de arquivos (produção: Supabase Storage via protocolo S3)
+django-storages[s3]>=1.14.4
+
 # Testes / cobertura
 coverage>=7.4
