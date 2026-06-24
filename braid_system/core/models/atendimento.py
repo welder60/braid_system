@@ -33,19 +33,6 @@ class Atendimento(models.Model):
         return f'{self.estabelecimento} | {self.cliente} | {self.data} {self.hora}'
 
 
-class FormaPagamento(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    nome = models.CharField(max_length=100)
-
-    class Meta:
-        db_table = 'forma_pagamento'
-        verbose_name = 'Forma de Pagamento'
-        verbose_name_plural = 'Formas de Pagamento'
-
-    def __str__(self):
-        return self.nome
-
-
 class Pagamento(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     atendimento = models.ForeignKey(
@@ -55,7 +42,7 @@ class Pagamento(models.Model):
         db_column='id_atendimento',
     )
     forma_pagamento = models.ForeignKey(
-        FormaPagamento,
+        'core.FormaPagamento',
         on_delete=models.PROTECT,
         related_name='pagamentos',
         db_column='id_forma_pagamento',

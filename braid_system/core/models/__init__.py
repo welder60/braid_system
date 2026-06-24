@@ -1,6 +1,7 @@
 from .estabelecimento import Estabelecimento, EstabelecimentoUsuario
 from .cliente import Cliente
-from .atendimento import Atendimento, FormaPagamento, Pagamento
+from .forma_pagamento import FormaPagamento
+from .atendimento import Atendimento, Pagamento
 from .caracteristica import (
     CaracteristicaAtendimento,
     CaracteristicaAtendimentoOpcao,

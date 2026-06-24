@@ -9,7 +9,7 @@ from django.db import transaction
 from .models import (
     Estabelecimento, EstabelecimentoUsuario, CategoriaCusto,
     CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao, Custo, Cliente,
-    Atendimento, Pagamento, AtendimentoCaracteristica,
+    Atendimento, Pagamento, AtendimentoCaracteristica, FormaPagamento,
 )
 from braid_system.security.models.usuario import Usuario
 
@@ -680,6 +680,9 @@ def _ctx_atendimentos(request, editando=None, mes=None, ano=None):
         .order_by('nome')
     )
 
+    # Formas de pagamento (a padrao vem primeiro para pre-selecao no wizard)
+    formas_pagamento = FormaPagamento.objects.order_by('-padrao', 'nome')
+
     # Atributos calculados para o formulario de edicao
     if editando is not None:
         editando.total_pago = sum(
@@ -697,6 +700,7 @@ def _ctx_atendimentos(request, editando=None, mes=None, ano=None):
         'clientes': clientes_qs,
         'caracteristicas': caracteristicas,
         'categorias_vinculadas': categorias_vinculadas,
+        'formas_pagamento': formas_pagamento,
         'duracoes_sugeridas': duracoes_sugeridas,
         'editando': editando,
         'hoje': agora.strftime('%Y-%m-%d'),
@@ -732,6 +736,7 @@ def atendimento_criar(request):
     data_val = request.POST.get('data', '').strip()
     hora_val = request.POST.get('hora', '').strip()
     duracao_val = request.POST.get('duracao', '').strip()
+    forma_pagamento_id = request.POST.get('forma_pagamento_id', '').strip()
     opcoes_ids = request.POST.getlist('opcoes')
 
     # Validacao dos campos obrigatorios
@@ -778,10 +783,17 @@ def atendimento_criar(request):
                 duracao=_duracao_para_minutos(duracao_val),
             )
 
+            # Forma de pagamento: a selecionada ou, na ausencia, a padrao
+            forma_pagamento = None
+            if forma_pagamento_id:
+                forma_pagamento = FormaPagamento.objects.filter(pk=forma_pagamento_id).first()
+            if forma_pagamento is None:
+                forma_pagamento = FormaPagamento.objects.filter(padrao=True).first()
+
             # Pagamento vinculado ao atendimento
             Pagamento.objects.create(
                 atendimento=atendimento,
-                forma_pagamento=None,
+                forma_pagamento=forma_pagamento,
                 valor=pagamento_dec,
             )
 

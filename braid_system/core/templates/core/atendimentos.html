@@ -515,6 +515,11 @@
       {% for d in duracoes_sugeridas %}{ valor:"{{ d.valor }}", label:"{{ d.label|escapejs }}" }{% if not forloop.last %},{% endif %}
       {% endfor %}
     ];
+    const FORMAS_PAGAMENTO = [
+      {% for f in formas_pagamento %}{ id:"{{ f.pk }}", nome:"{{ f.nome|escapejs }}", padrao:{% if f.padrao %}true{% else %}false{% endif %} }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ];
+    const FORMA_PADRAO_ID = (FORMAS_PAGAMENTO.find(f => f.padrao) || FORMAS_PAGAMENTO[0] || {}).id || '';
     const CRIAR_URL = "{% url 'atendimento_criar' %}";
     const CSRF = "{{ csrf_token }}";
     const MES_ATIVO = "{{ mes_ativo }}";
@@ -529,7 +534,7 @@
         clienteId: '', novoCliente: '',
         data: now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate()),
         hora: pad(now.getHours())+':'+pad(now.getMinutes()),
-        pagamento: '', duracao: '',
+        pagamento: '', formaPagamentoId: FORMA_PADRAO_ID, duracao: '',
         carac: {}, custo: {}
       };
       CARACS.forEach(c => S.carac[c.id] = new Set());
@@ -632,10 +637,21 @@
     }
 
     function htmlPagamento(){
+      let formaHTML = '';
+      if (FORMAS_PAGAMENTO.length){
+        let opts = '';
+        FORMAS_PAGAMENTO.forEach(f => {
+          const sel = (f.id === S.formaPagamentoId) ? ' selected' : '';
+          opts += '<option value="'+f.id+'"'+sel+'>'+esc(f.nome)+'</option>';
+        });
+        formaHTML = '<label class="wizard-label">Forma de pagamento</label>'
+                  + '<select class="wizard-input" id="wForma">'+opts+'</select>';
+      }
       return '<div class="wiz-question">Pagamento</div>'
            + '<div class="wiz-hint">Total recebido pelo serviço.</div>'
            + '<label class="wizard-label">Valor recebido (R$) *</label>'
-           + '<input type="number" inputmode="decimal" class="wizard-input big" id="wPag" value="'+esc(S.pagamento)+'" step="0.01" min="0" placeholder="0,00">';
+           + '<input type="number" inputmode="decimal" class="wizard-input big" id="wPag" value="'+esc(S.pagamento)+'" step="0.01" min="0" placeholder="0,00">'
+           + formaHTML;
     }
 
     function htmlDuracao(){
@@ -738,6 +754,8 @@
       else if (page.t === 'pagamento'){
         const el = document.getElementById('wPag');
         el.oninput = e => { S.pagamento = e.target.value; atualizarNext(); };
+        const fp = document.getElementById('wForma');
+        if (fp) fp.onchange = e => { S.formaPagamentoId = e.target.value; };
         setTimeout(() => el.focus(), 80);
       }
       else if (page.t === 'duracao'){
@@ -822,6 +840,7 @@
       if (S.clienteId) add('cliente_id', S.clienteId); else add('novo_cliente', S.novoCliente);
       add('data', S.data); add('hora', S.hora);
       add('pagamento_valor', S.pagamento);
+      if (S.formaPagamentoId) add('forma_pagamento_id', S.formaPagamentoId);
       add('duracao', S.duracao || '');
       Object.keys(S.carac).forEach(cid => S.carac[cid].forEach(oid => add('opcoes', oid)));
       Object.keys(S.custo).forEach(catId => { const v = S.custo[catId]; if (v && parseFloat(v) > 0) add('custo_'+catId, v); });
