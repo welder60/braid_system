@@ -265,3 +265,22 @@ if not DEBUG:
 # Auth                                                                         #
 # --------------------------------------------------------------------------- #
 AUTH_USER_MODEL = 'security.Usuario'
+
+# Para onde o @login_required redireciona e o destino padrão pós-login.
+LOGIN_URL = 'home'
+LOGIN_REDIRECT_URL = 'gestao'
+LOGOUT_REDIRECT_URL = 'home'
+
+# --------------------------------------------------------------------------- #
+# Login com Google (OAuth2 / OpenID Connect)                                  #
+# --------------------------------------------------------------------------- #
+# Credenciais obtidas em https://console.cloud.google.com/apis/credentials
+# (OAuth 2.0 Client ID, tipo "Web application"). Configure a URI de redirect
+# autorizada como  <SEU_DOMINIO>/auth/google/callback/
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get('GOOGLE_OAUTH_CLIENT_ID', '')
+GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET', '')
+
+# Tipo (papel) atribuído a um usuário criado automaticamente no 1º login Google.
+GOOGLE_OAUTH_DEFAULT_TIPO = os.environ.get(
+    'GOOGLE_OAUTH_DEFAULT_TIPO', 'profissional',
+)

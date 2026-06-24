@@ -121,6 +121,31 @@
       flex-shrink: 0;
     }
 
+    /* ── Mensagens (erros de login etc.) ── */
+    .messages {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      list-style: none;
+    }
+    .messages li {
+      padding: 0.7rem 0.9rem;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      text-align: left;
+    }
+    .messages li.error {
+      background: #f9e3dc;
+      color: #8C4A2F;
+      border: 1px solid rgba(140,74,47,0.35);
+    }
+    .messages li.success {
+      background: #e3ecdc;
+      color: #2F3B2E;
+      border: 1px solid rgba(47,59,46,0.30);
+    }
+
     /* ── Separador ── */
     .separator {
       display: flex;
@@ -219,6 +244,14 @@
         <p>Plataforma de gestão para trancistas.<br>Faça login para continuar.</p>
       </div>
 
+      {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
       <div class="divider"></div>
 	  
 	  <!-- Formulário usuário/senha -->
@@ -237,8 +270,8 @@
 
       <div class="separator">ou</div>  
 
-      <!-- Botão de login — lógica de autenticação será implementada futuramente -->
-      <a href="/gestao/" class="btn-google">
+      <!-- Botão de login com Google (OAuth2 / OpenID Connect) -->
+      <a href="{% url 'google_login' %}" class="btn-google">
         <!-- Logo Google SVG oficial -->
         <svg class="google-logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
           <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>

@@ -21,6 +21,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', include('braid_system.security.urls')),
     path('', include('braid_system.core.urls')),
 ]
 
