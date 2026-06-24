@@ -44,6 +44,12 @@ urlpatterns = [
     path('admin-painel/acessos/<uuid:pk>/editar/', views.acesso_editar, name='acesso_editar'),
     path('admin-painel/acessos/<uuid:pk>/excluir/', views.acesso_excluir, name='acesso_excluir'),
 
+    # Formas de Pagamento
+    path('admin-painel/formas-pagamento/', views.formas_pagamento, name='formas_pagamento'),
+    path('admin-painel/formas-pagamento/criar/', views.forma_pagamento_criar, name='forma_pagamento_criar'),
+    path('admin-painel/formas-pagamento/<uuid:pk>/editar/', views.forma_pagamento_editar, name='forma_pagamento_editar'),
+    path('admin-painel/formas-pagamento/<uuid:pk>/excluir/', views.forma_pagamento_excluir, name='forma_pagamento_excluir'),
+
     # Modulos principais
     path('atendimentos/', views.atendimentos, name='atendimentos'),
     path('atendimentos/criar/', views.atendimento_criar, name='atendimento_criar'),

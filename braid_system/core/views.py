@@ -1,17 +1,44 @@
 import os
+from functools import wraps
 from decimal import Decimal, InvalidOperation
 from datetime import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.db import transaction
+from django.db.models import ProtectedError
 from .models import (
     Estabelecimento, EstabelecimentoUsuario, CategoriaCusto,
     CaracteristicaAtendimento, CaracteristicaAtendimentoOpcao, Custo, Cliente,
     Atendimento, Pagamento, AtendimentoCaracteristica, FormaPagamento,
 )
 from braid_system.security.models.usuario import Usuario
+
+
+# Tipos de usuário com acesso à área de administrador.
+TIPOS_ADMIN = ('admin', 'consultor')
+
+
+def admin_required(view_func):
+    """
+    Restringe o acesso à área de administrador.
+
+    Exige usuário autenticado E com papel administrativo (admin ou consultor).
+    Quem não está logado vai para a tela de login; quem está logado mas não tem
+    permissão é redirecionado para a gestão com uma mensagem.
+    """
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            messages.error(request, 'Faça login para acessar a administração.')
+            return redirect('home')
+        if getattr(request.user, 'tipo', None) not in TIPOS_ADMIN:
+            messages.error(request, 'Acesso restrito à área de administrador.')
+            return redirect('gestao')
+        return view_func(request, *args, **kwargs)
+    return _wrapped
 
 
 def home(request):
@@ -37,6 +64,7 @@ def logout_view(request):
     return redirect('home')
 
 
+@login_required
 def gestao(request):
     return render(request, 'core/gestao.html')
 
@@ -544,6 +572,65 @@ def acesso_excluir(request, pk):
         acesso.delete()
         messages.success(request, f'Acesso de "{nome_usuario}" ao "{nome_est}" removido.')
     return redirect('acessos_estabelecimento')
+
+
+# ── Formas de Pagamento ──────────────────────────────────────────────────────
+
+def _ctx_formas_pagamento(editando=None):
+    formas = FormaPagamento.objects.order_by('-padrao', 'nome')
+    return {
+        'formas_pagamento': formas,
+        'total_formas': formas.count(),
+        'editando': editando,
+    }
+
+
+def formas_pagamento(request):
+    return render(request, 'core/formas_pagamento.html', _ctx_formas_pagamento())
+
+
+def forma_pagamento_criar(request):
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        padrao = request.POST.get('padrao') == 'on'
+        if not nome:
+            messages.error(request, 'O nome é obrigatório.')
+        else:
+            FormaPagamento.objects.create(nome=nome, padrao=padrao)
+            messages.success(request, f'Forma de pagamento "{nome}" criada com sucesso!')
+            return redirect('formas_pagamento')
+    return render(request, 'core/formas_pagamento.html', _ctx_formas_pagamento())
+
+
+def forma_pagamento_editar(request, pk):
+    forma = get_object_or_404(FormaPagamento, pk=pk)
+    if request.method == 'POST':
+        nome = request.POST.get('nome', '').strip()
+        padrao = request.POST.get('padrao') == 'on'
+        if not nome:
+            messages.error(request, 'O nome é obrigatório.')
+        else:
+            forma.nome = nome
+            forma.padrao = padrao
+            forma.save()
+            messages.success(request, f'Forma de pagamento "{nome}" atualizada.')
+            return redirect('formas_pagamento')
+    return render(request, 'core/formas_pagamento.html', _ctx_formas_pagamento(editando=forma))
+
+
+def forma_pagamento_excluir(request, pk):
+    forma = get_object_or_404(FormaPagamento, pk=pk)
+    if request.method == 'POST':
+        nome = forma.nome
+        try:
+            forma.delete()
+            messages.success(request, f'Forma de pagamento "{nome}" excluída.')
+        except ProtectedError:
+            messages.error(
+                request,
+                f'Não é possível excluir "{nome}": há pagamentos vinculados a esta forma.',
+            )
+    return redirect('formas_pagamento')
 
 
 # ── Módulos principais ─────────────────────────────────────────────────────────
@@ -1264,3 +1351,27 @@ def relatorios(request):
         'relatorios_meses': relatorios_meses,
         'indice_inicial': indice_inicial,
     })
+
+
+# ── Proteção da área de administrador ────────────────────────────────────────
+# Aplica login + verificação de papel (admin/consultor) a todas as views do
+# painel administrativo de forma centralizada — um único ponto de auditoria.
+# Uma view nova de admin só fica protegida ao ser adicionada nesta lista.
+_ADMIN_VIEWS = (
+    'admin_painel',
+    'estabelecimentos', 'estabelecimento_criar',
+    'estabelecimento_editar', 'estabelecimento_excluir',
+    'categorias_custo', 'categoria_custo_criar',
+    'categoria_custo_editar', 'categoria_custo_excluir',
+    'caracteristicas_atendimento', 'caracteristica_atendimento_criar',
+    'caracteristica_atendimento_editar', 'caracteristica_atendimento_excluir',
+    'caracteristica_atendimento_opcoes', 'opcao_caracteristica_criar',
+    'opcao_caracteristica_editar', 'opcao_caracteristica_excluir',
+    'usuarios', 'usuario_criar', 'usuario_editar', 'usuario_excluir',
+    'acessos_estabelecimento', 'acesso_criar', 'acesso_editar', 'acesso_excluir',
+    'formas_pagamento', 'forma_pagamento_criar',
+    'forma_pagamento_editar', 'forma_pagamento_excluir',
+)
+
+for _view_name in _ADMIN_VIEWS:
+    globals()[_view_name] = admin_required(globals()[_view_name])

@@ -16,6 +16,7 @@
     border-radius: 20px;
   }
   .tipo-admin        { background: #fde8e0; color: var(--color-terracota); }
+  .tipo-consultor    { background: #ece7f6; color: #5a3a8c; }
   .tipo-gerente      { background: #fef9ec; color: var(--color-earth); }
   .tipo-profissional { background: #eaf4ec; color: var(--color-moss); }
 
@@ -82,6 +83,7 @@
             <select id="tipo" name="tipo" class="form-control" required>
               <option value="">Selecione…</option>
               <option value="admin"        {% if editando.tipo == 'admin' %}selected{% endif %}>Admin</option>
+              <option value="consultor"    {% if editando.tipo == 'consultor' %}selected{% endif %}>Consultor</option>
               <option value="gerente"      {% if editando.tipo == 'gerente' %}selected{% endif %}>Gerente</option>
               <option value="profissional" {% if editando.tipo == 'profissional' %}selected{% endif %}>Profissional</option>
             </select>

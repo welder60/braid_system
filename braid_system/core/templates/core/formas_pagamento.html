@@ -1,0 +1,160 @@
+{% extends 'core/admin_base.html' %}
+
+{% block title %}Formas de Pagamento{% endblock %}
+
+{% block nav_formas_pagamento %}class="active"{% endblock %}
+
+{% block extra_styles %}
+  /* ── Badge "padrão" ── */
+  .padrao-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.55rem;
+    border-radius: 20px;
+    background: #fef9ec;
+    color: var(--color-earth);
+    border: 1px solid var(--color-gold);
+  }
+  .padrao-muted { color: #ccc; font-size: 0.8rem; }
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">Formas de Pagamento</h2>
+      <p class="page-subtitle" style="margin-bottom:0">Gerencie as formas de pagamento aceitas nos atendimentos</p>
+    </div>
+  </div>
+
+  {% if messages %}
+  <ul class="messages">
+    {% for msg in messages %}
+    <li class="{{ msg.tags }}">{{ msg }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <div class="two-col">
+
+    <!-- ── Painel esquerdo: formulário ── -->
+    <div class="card">
+      <div class="card-header">
+        <h3>{% if editando %}✏️ Editar Forma de Pagamento{% else %}➕ Nova Forma de Pagamento{% endif %}</h3>
+      </div>
+      <div class="card-body">
+        <form method="post"
+          action="{% if editando %}{% url 'forma_pagamento_editar' editando.pk %}{% else %}{% url 'forma_pagamento_criar' %}{% endif %}">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label for="nome">Nome</label>
+            <input type="text" id="nome" name="nome" class="form-control"
+              placeholder="Ex.: Dinheiro, Pix, Cartão de Crédito…"
+              value="{{ editando.nome|default:'' }}" required maxlength="100" autofocus />
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="padrao" name="padrao"
+              {% if editando.padrao %}checked{% endif %} />
+            <label for="padrao">Definir como forma de pagamento padrão</label>
+          </div>
+          <p class="form-hint">A forma padrão é pré-selecionada ao registrar um atendimento. Apenas uma pode ser a padrão.</p>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+              {% if editando %}💾 Salvar alterações{% else %}➕ Adicionar{% endif %}
+            </button>
+            {% if editando %}
+            <a href="{% url 'formas_pagamento' %}" class="btn btn-ghost">Cancelar</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Painel direito: lista ── -->
+    <div class="card">
+      <div class="card-header">
+        <h3>💳 Formas cadastradas</h3>
+        <span style="font-size:0.8rem;color:#aaa;">{{ total_formas }} registro{{ total_formas|pluralize:",s" }}</span>
+      </div>
+
+      {% if formas_pagamento %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Padrão</th>
+              <th style="text-align:right;">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for forma in formas_pagamento %}
+            <tr>
+              <td><strong>{{ forma.nome }}</strong></td>
+              <td>
+                {% if forma.padrao %}
+                  <span class="padrao-badge">★ Padrão</span>
+                {% else %}
+                  <span class="padrao-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="td-actions">
+                  <a href="{% url 'forma_pagamento_editar' forma.pk %}" class="btn btn-secondary btn-sm">✏️ Editar</a>
+                  <button class="btn btn-danger btn-sm"
+                    onclick="abrirModal('{{ forma.pk }}', '{{ forma.nome|escapejs }}')">🗑️ Excluir</button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty"><p>Nenhuma forma de pagamento cadastrada ainda.</p></div>
+      {% endif %}
+    </div>
+
+  </div><!-- /.two-col -->
+
+  <!-- Modal de confirmação de exclusão -->
+  <div class="modal-overlay" id="modal-excluir">
+    <div class="modal">
+      <h4>Confirmar exclusão</h4>
+      <p id="modal-msg">Deseja excluir esta forma de pagamento?</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <form id="form-excluir" method="post" action="">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Excluir</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function abrirModal(pk, nome) {
+    document.getElementById('modal-msg').textContent =
+      'Deseja excluir "' + nome + '"? Esta ação não pode ser desfeita.';
+    document.getElementById('form-excluir').action =
+      '{% url "forma_pagamento_excluir" "00000000-0000-0000-0000-000000000000" %}'.replace(
+        '00000000-0000-0000-0000-000000000000', pk);
+    document.getElementById('modal-excluir').classList.add('open');
+  }
+  function fecharModal() {
+    document.getElementById('modal-excluir').classList.remove('open');
+  }
+  document.getElementById('modal-excluir').addEventListener('click', function(e) {
+    if (e.target === this) fecharModal();
+  });
+</script>
+{% endblock %}
