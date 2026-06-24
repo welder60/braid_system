@@ -1,12 +1,10 @@
+{% load static %}
 {# _navbar.html — Navbar centralizada do Braid System #}
 {# Variáveis: navbar_title, navbar_back_url, navbar_back_label, navbar_show_back, navbar_show_user, navbar_badge #}
 
 <header>
   <div class="header-left">
-    <svg width="28" height="28" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M10 26 C10 20 14 16 18 18 C22 20 26 16 26 10" stroke="#E7DAC1" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M10 18 C10 14 13 12 16 13 C19 14 22 12 22 8" stroke="#C8A15A" stroke-width="2" stroke-linecap="round"/>
-    </svg>
+    <img class="logo-icon" src="{% static 'core/img/logo.png' %}" alt="Braid System logo" />
     <h1>{{ navbar_title|default:"Braid System" }}</h1>
     {% if navbar_badge %}
       <span class="badge">{{ navbar_badge }}</span>

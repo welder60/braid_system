@@ -65,3 +65,8 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     @property
     def is_active(self):
         return self.ativo
+
+    @property
+    def is_admin_role(self):
+        """Papéis com acesso à área de administração (admin ou consultor)."""
+        return self.tipo in ('admin', 'consultor')
