@@ -272,6 +272,18 @@ LOGIN_REDIRECT_URL = 'gestao'
 LOGOUT_REDIRECT_URL = 'home'
 
 # --------------------------------------------------------------------------- #
+# Admin embutido do Django                                                    #
+# --------------------------------------------------------------------------- #
+# A tela de login do admin (/admin/) fica exposta publicamente e nenhum modelo
+# do app está registrado nele, então por padrão ele só é montado em
+# desenvolvimento. Em produção, habilite explicitamente (DJANGO_ADMIN_ENABLED=
+# True) e, de preferência, sirva-o numa URL secreta (DJANGO_ADMIN_URL=
+# algo-dificil-de-adivinhar/). O acesso continua exigindo is_staff=True, ou
+# seja, apenas superusuários.
+DJANGO_ADMIN_ENABLED = env_bool('DJANGO_ADMIN_ENABLED', default=DEBUG)
+DJANGO_ADMIN_URL = os.environ.get('DJANGO_ADMIN_URL', 'admin/').lstrip('/')
+
+# --------------------------------------------------------------------------- #
 # Login com Google (OAuth2 / OpenID Connect)                                  #
 # --------------------------------------------------------------------------- #
 # Credenciais obtidas em https://console.cloud.google.com/apis/credentials
