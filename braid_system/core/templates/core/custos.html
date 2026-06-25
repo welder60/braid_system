@@ -468,7 +468,7 @@
                   <label>Categoria *</label>
                   <select name="categoria_custo" required>
                     <option value="">Selecione…</option>
-                    {% for cat in categorias %}
+                    {% for cat in subcategorias %}
                       <option value="{{ cat.pk }}" {% if cat.pk == editando.categoria_custo.pk %}selected{% endif %}>{{ cat.nome }}</option>
                     {% endfor %}
                   </select>

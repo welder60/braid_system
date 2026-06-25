@@ -939,7 +939,7 @@ def atendimento_criar(request):
                     continue
                 cat_id = chave[len('custo_'):]
                 categoria = CategoriaCusto.objects.filter(
-                    pk=cat_id, vinculado_atendimento=True,
+                    pk=cat_id, vinculado_atendimento=True, nivel_superior__isnull=False,
                 ).first()
                 if not categoria:
                     continue
@@ -1072,6 +1072,7 @@ def _ctx_custos(request, editando=None, mes=None, ano=None):
     qs = Custo.objects.none()
     total_mes = 0
     categorias = CategoriaCusto.objects.order_by('nome')
+    subcategorias = CategoriaCusto.objects.filter(nivel_superior__isnull=False).order_by('nome')
 
     if estabelecimento:
         qs = (
@@ -1096,6 +1097,7 @@ def _ctx_custos(request, editando=None, mes=None, ano=None):
         'meses': meses,
         'total_mes': total_mes,
         'categorias': categorias,
+        'subcategorias': subcategorias,
         'mes_label': ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
                       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'][mes] + f' de {ano}',
     }
@@ -1137,15 +1139,18 @@ def custo_criar(request):
         if not erros:
             try:
                 categoria = CategoriaCusto.objects.get(pk=categoria_id, vinculado_atendimento=False)
-                Custo.objects.create(
-                    estabelecimento=estabelecimento,
-                    categoria_custo=categoria,
-                    descricao=descricao,
-                    data=data_val,
-                    valor=valor,
-                    atendimento=None,
-                )
-                messages.success(request, 'Custo lançado com sucesso.')
+                if categoria.nivel_superior_id is None:
+                    messages.error(request, 'Não é permitido vincular uma super categoria a um custo. Selecione uma subcategoria.')
+                else:
+                    Custo.objects.create(
+                        estabelecimento=estabelecimento,
+                        categoria_custo=categoria,
+                        descricao=descricao,
+                        data=data_val,
+                        valor=valor,
+                        atendimento=None,
+                    )
+                    messages.success(request, 'Custo lançado com sucesso.')
             except CategoriaCusto.DoesNotExist:
                 messages.error(request, 'Categoria inválida.')
             except Exception as exc:
@@ -1173,12 +1178,16 @@ def custo_editar(request, pk):
         valor = request.POST.get('valor', '').strip().replace(',', '.')
 
         try:
-            custo.categoria_custo = CategoriaCusto.objects.get(pk=categoria_id, vinculado_atendimento=False)
-            custo.descricao = descricao
-            custo.data = data_val
-            custo.valor = valor
-            custo.save()
-            messages.success(request, 'Custo atualizado.')
+            categoria = CategoriaCusto.objects.get(pk=categoria_id, vinculado_atendimento=False)
+            if categoria.nivel_superior_id is None:
+                messages.error(request, 'Não é permitido vincular uma super categoria a um custo. Selecione uma subcategoria.')
+            else:
+                custo.categoria_custo = categoria
+                custo.descricao = descricao
+                custo.data = data_val
+                custo.valor = valor
+                custo.save()
+                messages.success(request, 'Custo atualizado.')
         except Exception as exc:
             messages.error(request, f'Erro: {exc}')
         return redirect(f'/custos/?mes={mes}&ano={ano}')

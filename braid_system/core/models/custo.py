@@ -1,4 +1,5 @@
 import uuid
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -58,6 +59,12 @@ class Custo(models.Model):
         db_table = 'custo'
         verbose_name = 'Custo'
         verbose_name_plural = 'Custos'
+
+    def clean(self):
+        if self.categoria_custo_id and self.categoria_custo.nivel_superior_id is None:
+            raise ValidationError(
+                {'categoria_custo': 'Não é permitido vincular uma super categoria a um custo. Selecione uma subcategoria.'}
+            )
 
     def __str__(self):
         return f'{self.categoria_custo} - {self.descricao}: R$ {self.valor}'
