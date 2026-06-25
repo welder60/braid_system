@@ -729,13 +729,16 @@ def _ctx_atendimentos(request, editando=None, mes=None, ano=None):
             Atendimento.objects
             .filter(estabelecimento=estabelecimento, data__year=ano, data__month=mes)
             .select_related('cliente')
-            .prefetch_related('pagamentos', 'caracteristicas__opcao', 'custos')
+            .prefetch_related('pagamentos', 'caracteristicas__opcao__nivel_superior', 'custos')
             .order_by('-data', '-hora')
         )
         for at in qs:
             at.total_pago = sum((p.valor for p in at.pagamentos.all()), Decimal('0'))
             at.duracao_fmt = _fmt_duracao(at.duracao)
-            at.caracteristica_nomes = [ac.opcao.nome for ac in at.caracteristicas.all()]
+            at.caracteristica_nomes = [
+                f"{ac.opcao.nivel_superior.nome} › {ac.opcao.nome}" if ac.opcao.nivel_superior else ac.opcao.nome
+                for ac in at.caracteristicas.all()
+            ]
             at.custos_total = sum((c.valor for c in at.custos.all()), Decimal('0'))
             atendimentos_lista.append(at)
 
