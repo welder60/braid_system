@@ -65,4 +65,10 @@ urlpatterns = [
     path('clientes/<uuid:pk>/editar/', views.cliente_editar, name='cliente_editar'),
     path('clientes/<uuid:pk>/excluir/', views.cliente_excluir, name='cliente_excluir'),
     path('relatorios/', views.relatorios, name='relatorios'),
+
+    # Painel do Consultor
+    path('consultor/', views.consultor_painel, name='consultor_painel'),
+    path('consultor/relatorios/', views.consultor_relatorios, name='consultor_relatorios'),
+    path('consultor/trocar-estabelecimento/', views.consultor_trocar_estabelecimento, name='consultor_trocar_estabelecimento'),
+    path('consultor/exportar-csv/', views.consultor_exportar_csv, name='consultor_exportar_csv'),
 ]
