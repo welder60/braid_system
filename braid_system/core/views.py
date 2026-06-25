@@ -1834,6 +1834,9 @@ def consultor_relatorio_atendimentos(request):
     total_faturado_raw = Decimal('0')
     anos_disponiveis = []
 
+    # Busca todas as características ordenadas para montar as colunas
+    caracteristicas_list = list(CaracteristicaAtendimento.objects.order_by('ordem'))
+
     if estabelecimento:
         anos_set = set()
         for d in Atendimento.objects.filter(estabelecimento=estabelecimento).dates('data', 'year'):
@@ -1846,7 +1849,13 @@ def consultor_relatorio_atendimentos(request):
             .filter(estabelecimento=estabelecimento, data__gte=data_ini, data__lte=data_fim)
             .select_related('cliente')
             .prefetch_related(
-                Prefetch('pagamentos', queryset=Pagamento.objects.select_related('forma_pagamento'))
+                Prefetch('pagamentos', queryset=Pagamento.objects.select_related('forma_pagamento')),
+                Prefetch(
+                    'caracteristicas',
+                    queryset=AtendimentoCaracteristica.objects.select_related(
+                        'opcao__caracteristica_atendimento'
+                    ),
+                ),
             )
             .order_by('data', 'hora')
         )
@@ -1868,6 +1877,18 @@ def consultor_relatorio_atendimentos(request):
             formas = ', '.join(
                 p.forma_pagamento.nome if p.forma_pagamento else 'N/A' for p in pags
             ) if pags else '—'
+
+            # Monta mapa: pk da caracteristica -> lista de nomes de opções selecionadas
+            car_map = {}
+            for ac in at.caracteristicas.all():
+                cid = ac.opcao.caracteristica_atendimento_id
+                car_map.setdefault(cid, []).append(ac.opcao.nome)
+
+            caracteristicas_vals = [
+                ', '.join(car_map.get(c.pk, [])) or '—'
+                for c in caracteristicas_list
+            ]
+
             atendimentos.append({
                 'data': at.data,
                 'hora': at.hora,
@@ -1875,6 +1896,7 @@ def consultor_relatorio_atendimentos(request):
                 'duracao': _fmt_horas_br(at.duracao) if at.duracao else '—',
                 'valor': _fmt_money_br(valor_total) if pags else '—',
                 'formas_pagamento': formas,
+                'caracteristicas_vals': caracteristicas_vals,
             })
 
     ctx.update({
@@ -1889,6 +1911,7 @@ def consultor_relatorio_atendimentos(request):
         'mes_fim': mes_fim,
         'data_ini': data_ini,
         'data_fim': data_fim,
+        'caracteristicas_list': caracteristicas_list,
     })
     return render(request, 'core/consultor_relatorio_atendimentos.html', ctx)
 
@@ -1929,15 +1952,26 @@ def consultor_exportar_csv_atendimentos(request):
         f'_{ano_ini}{mes_ini:02d}_{ano_fim}{mes_fim:02d}.csv"'
     )
 
+    # Busca todas as características ordenadas para montar o cabeçalho
+    caracteristicas_list = list(CaracteristicaAtendimento.objects.order_by('ordem'))
+
     writer = csv.writer(response, delimiter=';')
-    writer.writerow(['Data', 'Hora', 'Cliente', 'Duração (min)', 'Valor (R$)', 'Forma de Pagamento'])
+    header = ['Data', 'Hora', 'Cliente', 'Duração (min)', 'Valor (R$)', 'Forma de Pagamento']
+    header += [c.nome for c in caracteristicas_list]
+    writer.writerow(header)
 
     qs = (
         Atendimento.objects
         .filter(estabelecimento=estabelecimento, data__gte=data_ini, data__lte=data_fim)
         .select_related('cliente')
         .prefetch_related(
-            Prefetch('pagamentos', queryset=Pagamento.objects.select_related('forma_pagamento'))
+            Prefetch('pagamentos', queryset=Pagamento.objects.select_related('forma_pagamento')),
+            Prefetch(
+                'caracteristicas',
+                queryset=AtendimentoCaracteristica.objects.select_related(
+                    'opcao__caracteristica_atendimento'
+                ),
+            ),
         )
         .order_by('data', 'hora')
     )
@@ -1948,6 +1982,14 @@ def consultor_exportar_csv_atendimentos(request):
         formas = ', '.join(
             p.forma_pagamento.nome if p.forma_pagamento else 'N/A' for p in pags
         ) if pags else ''
+
+        car_map = {}
+        for ac in at.caracteristicas.all():
+            cid = ac.opcao.caracteristica_atendimento_id
+            car_map.setdefault(cid, []).append(ac.opcao.nome)
+
+        car_vals = [', '.join(car_map.get(c.pk, [])) for c in caracteristicas_list]
+
         writer.writerow([
             at.data.strftime('%d/%m/%Y'),
             at.hora.strftime('%H:%M'),
@@ -1955,6 +1997,6 @@ def consultor_exportar_csv_atendimentos(request):
             at.duracao or '',
             str(valor_total).replace('.', ',') if pags else '',
             formas,
-        ])
+        ] + car_vals)
 
     return response

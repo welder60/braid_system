@@ -279,6 +279,9 @@
                 <th>Duração</th>
                 <th class="right">Valor</th>
                 <th>Forma de Pagamento</th>
+                {% for car in caracteristicas_list %}
+                <th>{{ car.nome }}</th>
+                {% endfor %}
               </tr>
             </thead>
             <tbody>
@@ -298,6 +301,9 @@
                     <span style="color:#ccc;">—</span>
                   {% endif %}
                 </td>
+                {% for val in at.caracteristicas_vals %}
+                <td>{{ val }}</td>
+                {% endfor %}
               </tr>
               {% endfor %}
             </tbody>
@@ -305,7 +311,7 @@
               <tr>
                 <td colspan="3"><strong>Total ({{ total_atendimentos }} atendimentos)</strong></td>
                 <td class="right">R$ {{ total_faturado }}</td>
-                <td></td>
+                <td{% if caracteristicas_list %} colspan="{{ caracteristicas_list|length|add:1 }}"{% endif %}></td>
               </tr>
             </tfoot>
           </table>
