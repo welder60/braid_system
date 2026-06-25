@@ -842,7 +842,14 @@
       add('pagamento_valor', S.pagamento);
       if (S.formaPagamentoId) add('forma_pagamento_id', S.formaPagamentoId);
       add('duracao', S.duracao || '');
-      Object.keys(S.carac).forEach(cid => S.carac[cid].forEach(oid => add('opcoes', oid)));
+      Object.keys(S.carac).forEach(cid => {
+        const carac = caracById(cid);
+        S.carac[cid].forEach(oid => {
+          // Envia apenas opções folha: aquelas sem nenhum filho selecionado
+          const temFilhoSelecionado = childrenOf(carac, oid).some(child => S.carac[cid].has(child.id));
+          if (!temFilhoSelecionado) add('opcoes', oid);
+        });
+      });
       Object.keys(S.custo).forEach(catId => { const v = S.custo[catId]; if (v && parseFloat(v) > 0) add('custo_'+catId, v); });
       document.body.appendChild(form);
       form.submit();
