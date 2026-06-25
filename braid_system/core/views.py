@@ -1681,6 +1681,7 @@ def consultor_relatorios(request):
             lucro = faturado - custos_total
             horas_dec = (Decimal(total_min) / Decimal(60)) if total_min else Decimal('0')
             lucro_por_hora = (lucro / horas_dec) if horas_dec else None
+            lucro_por_atend = (lucro / total_atend) if total_atend else None
 
             if total_atend == 0 and faturado == 0 and custos_total == 0:
                 continue
@@ -1695,6 +1696,9 @@ def consultor_relatorios(request):
                 'lucro_total': _fmt_money_br(lucro),
                 'lucro_positivo': lucro >= 0,
                 'lucro_por_hora': _fmt_money_br(lucro_por_hora) if lucro_por_hora else None,
+                'lucro_por_atendimento': _fmt_money_br(lucro_por_atend) if lucro_por_atend is not None else None,
+                'total_horas': _fmt_horas_br(total_min) if total_min else None,
+                'total_min_raw': total_min,
             })
 
         tot_fat = (
@@ -1712,12 +1716,14 @@ def consultor_relatorios(request):
         ) or Decimal('0')
         tot_lucro = tot_fat - tot_cus
         tot_at = sum(m['total_atendimentos'] for m in relatorios_meses)
+        tot_min = sum(m['total_min_raw'] for m in relatorios_meses)
         totais = {
             'atendimentos': tot_at,
             'faturado': _fmt_money_br(tot_fat),
             'custos': _fmt_money_br(tot_cus),
             'lucro': _fmt_money_br(tot_lucro),
             'lucro_positivo': tot_lucro >= 0,
+            'total_horas': _fmt_horas_br(tot_min) if tot_min else None,
         }
 
     ctx.update({
@@ -1759,7 +1765,7 @@ def consultor_exportar_csv(request):
     response['Content-Disposition'] = f'attachment; filename="relatorio_{nome_base}{sufixo}.csv"'
 
     writer = csv.writer(response, delimiter=';')
-    writer.writerow(['Mês', 'Atendimentos', 'Faturado (R$)', 'Custos (R$)', 'Lucro (R$)'])
+    writer.writerow(['Mês', 'Atendimentos', 'Horas', 'Faturado (R$)', 'Custos (R$)', 'Lucro (R$)', 'Lucro/Atend. (R$)'])
 
     qs_at = Atendimento.objects.filter(estabelecimento=estabelecimento)
     qs_pag = Pagamento.objects.filter(atendimento__estabelecimento=estabelecimento)
@@ -1780,15 +1786,21 @@ def consultor_exportar_csv(request):
         chaves.add((d.year, d.month))
 
     for a, m in sorted(chaves):
-        qtd = qs_at.filter(data__year=a, data__month=m).aggregate(c=Count('id'))['c'] or 0
+        agg = qs_at.filter(data__year=a, data__month=m).aggregate(c=Count('id'), minutos=Sum('duracao'))
+        qtd = agg['c'] or 0
+        total_min = agg['minutos'] or 0
         fat = qs_pag.filter(atendimento__data__year=a, atendimento__data__month=m).aggregate(s=Sum('valor'))['s'] or Decimal('0')
         cus = qs_cus.filter(data__year=a, data__month=m).aggregate(s=Sum('valor'))['s'] or Decimal('0')
         lucro = fat - cus
+        lucro_por_atend = (lucro / qtd) if qtd else None
         label = f'{MESES_PT[m]}/{str(a)[2:]}'
+        horas_fmt = _fmt_horas_br(total_min) if total_min else ''
         writer.writerow([label, qtd,
+                         horas_fmt,
                          str(fat).replace('.', ','),
                          str(cus).replace('.', ','),
-                         str(lucro).replace('.', ',')])
+                         str(lucro).replace('.', ','),
+                         str(lucro_por_atend.quantize(Decimal('0.01'))).replace('.', ',') if lucro_por_atend is not None else ''])
 
     return response
 
@@ -2000,3 +2012,150 @@ def consultor_exportar_csv_atendimentos(request):
         ] + car_vals)
 
     return response
+
+
+@_consultor_required
+def consultor_dashboard_caracteristicas(request):
+    """Dashboard filtrado por período e por características de atendimento.
+    Exibe os mesmos indicadores do dashboard geral (lucro, faturado, custos,
+    atendimentos, duração média, lucro/atend., lucro/hora)."""
+    import calendar
+    from datetime import date as date_cls
+    from django.db.models import Sum, Count
+
+    ctx = _get_consultor_context_base(request)
+    estabelecimento = ctx['estabelecimento_ativo']
+
+    hoje = date_cls.today()
+    MESES_PT_FULL = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+
+    # ── Período ──────────────────────────────────────────────────────────────
+    try:
+        ano_ini = int(request.GET.get('ano_ini', hoje.year))
+        mes_ini = max(1, min(12, int(request.GET.get('mes_ini', 1))))
+        ano_fim = int(request.GET.get('ano_fim', hoje.year))
+        mes_fim = max(1, min(12, int(request.GET.get('mes_fim', hoje.month))))
+    except (ValueError, TypeError):
+        ano_ini, mes_ini = hoje.year, 1
+        ano_fim, mes_fim = hoje.year, hoje.month
+
+    data_ini = date_cls(ano_ini, mes_ini, 1)
+    ultimo_dia = calendar.monthrange(ano_fim, mes_fim)[1]
+    data_fim = date_cls(ano_fim, mes_fim, ultimo_dia)
+
+    if data_ini > data_fim:
+        data_ini, data_fim = data_fim, date_cls(
+            data_ini.year, data_ini.month,
+            calendar.monthrange(data_ini.year, data_ini.month)[1]
+        )
+        ano_ini, mes_ini = data_ini.year, data_ini.month
+        ano_fim, mes_fim = data_fim.year, data_fim.month
+
+    # ── Filtros de características ────────────────────────────────────────────
+    # GET: opcoes_<uuid_caracteristica> = [lista de UUIDs de opcoes selecionadas]
+    caracteristicas_list = list(
+        CaracteristicaAtendimento.objects.prefetch_related('opcoes').order_by('ordem')
+    )
+
+    filtros_car = {}   # {caracteristica_pk (str): [opcao_pk (str), ...]}
+    for car in caracteristicas_list:
+        key = f'opcoes_{car.pk}'
+        selecionadas = request.GET.getlist(key)
+        if selecionadas:
+            filtros_car[str(car.pk)] = selecionadas
+
+    anos_disponiveis = []
+    kpi = {
+        'lucro':           _fmt_money_br(Decimal('0')),
+        'lucro_positivo':  True,
+        'faturado':        _fmt_money_br(Decimal('0')),
+        'atendimentos':    0,
+        'custos':          _fmt_money_br(Decimal('0')),
+        'duracao_media':   None,
+        'lucro_por_atend': None,
+        'lucro_por_hora':  None,
+    }
+
+    if estabelecimento:
+        anos_set = set()
+        for d in Atendimento.objects.filter(estabelecimento=estabelecimento).dates('data', 'year'):
+            anos_set.add(d.year)
+        anos_set.add(hoje.year)
+        anos_disponiveis = sorted(anos_set)
+
+        # Base QS filtrada por estabelecimento e período
+        qs = Atendimento.objects.filter(
+            estabelecimento=estabelecimento,
+            data__gte=data_ini,
+            data__lte=data_fim,
+        )
+
+        # Aplica filtro de características (AND entre características, OR entre opções da mesma)
+        for car_pk, opcao_pks in filtros_car.items():
+            qs = qs.filter(caracteristicas__opcao_id__in=opcao_pks)
+
+        qs = qs.distinct()
+
+        # Agrega
+        agg = qs.aggregate(qtd=Count('id'), minutos=Sum('duracao'))
+        total_atend = agg['qtd'] or 0
+        total_min   = agg['minutos'] or 0
+
+        faturado = (
+            Pagamento.objects
+            .filter(atendimento__in=qs)
+            .aggregate(s=Sum('valor'))['s']
+        ) or Decimal('0')
+
+        custos_total = (
+            Custo.objects
+            .filter(estabelecimento=estabelecimento, data__gte=data_ini, data__lte=data_fim)
+            .aggregate(s=Sum('valor'))['s']
+        ) or Decimal('0')
+
+        lucro = faturado - custos_total
+        horas_dec = (Decimal(total_min) / Decimal(60)) if total_min else Decimal('0')
+        lucro_por_atend   = (lucro / total_atend) if total_atend else None
+        lucro_por_hora    = (lucro / horas_dec)   if horas_dec   else None
+        duracao_media_min = round(total_min / total_atend) if total_atend else None
+
+        kpi = {
+            'lucro':           _fmt_money_br(lucro),
+            'lucro_positivo':  lucro >= 0,
+            'faturado':        _fmt_money_br(faturado),
+            'atendimentos':    total_atend,
+            'custos':          _fmt_money_br(custos_total),
+            'duracao_media':   _fmt_horas_br(duracao_media_min) if duracao_media_min is not None else None,
+            'lucro_por_atend': _fmt_money_br(lucro_por_atend) if lucro_por_atend is not None else None,
+            'lucro_por_hora':  _fmt_money_br(lucro_por_hora)  if lucro_por_hora  is not None else None,
+        }
+
+    import json
+    # Para o template: set flat de UUIDs selecionados (facilita is-checked)
+    opcoes_selecionadas = set()
+    for pks in filtros_car.values():
+        opcoes_selecionadas.update(pks)
+
+    # Para o JS: dict com chaves "opcoes_<car_pk>" → [lista de opcao_pks]
+    filtros_car_json = json.dumps({
+        f'opcoes_{k}': v for k, v in filtros_car.items()
+    })
+
+    ctx.update({
+        'kpi':                  kpi,
+        'caracteristicas_list': caracteristicas_list,
+        'filtros_car':          filtros_car,
+        'filtros_car_json':     filtros_car_json,
+        'opcoes_selecionadas':  opcoes_selecionadas,
+        'anos_disponiveis':     anos_disponiveis,
+        'meses':                [(i, MESES_PT_FULL[i]) for i in range(1, 13)],
+        'ano_ini':              ano_ini,
+        'mes_ini':              mes_ini,
+        'ano_fim':              ano_fim,
+        'mes_fim':              mes_fim,
+        'data_ini':             data_ini,
+        'data_fim':             data_fim,
+        'filtros_ativos':       bool(filtros_car),
+    })
+    return render(request, 'core/consultor_dashboard_caracteristicas.html', ctx)

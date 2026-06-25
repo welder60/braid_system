@@ -165,10 +165,12 @@
               <tr>
                 <th>Mês</th>
                 <th class="right">Atend.</th>
+                <th class="right">Horas</th>
                 <th class="right">Faturado</th>
                 <th class="right">Custos</th>
                 <th class="right">Lucro</th>
                 <th class="right">Lucro/h</th>
+                <th class="right">Lucro/atend.</th>
                 <th style="text-align:center;width:100px;">Exportar</th>
               </tr>
             </thead>
@@ -177,10 +179,12 @@
               <tr>
                 <td><span class="badge-mes">{{ m.label_curto }}</span></td>
                 <td class="right">{{ m.total_atendimentos }}</td>
+                <td class="right">{% if m.total_horas %}{{ m.total_horas }}{% else %}—{% endif %}</td>
                 <td class="right">R$ {{ m.total_faturado }}</td>
                 <td class="right">R$ {{ m.total_custos }}</td>
                 <td class="right {% if m.lucro_positivo %}pos{% else %}neg{% endif %}">R$ {{ m.lucro_total }}</td>
                 <td class="right">{% if m.lucro_por_hora %}R$ {{ m.lucro_por_hora }}{% else %}—{% endif %}</td>
+                <td class="right">{% if m.lucro_por_atendimento %}R$ {{ m.lucro_por_atendimento }}{% else %}—{% endif %}</td>
                 <td style="text-align:center;">
                   <a href="{% url 'consultor_exportar_csv' %}?estabelecimento_id={{ estabelecimento_ativo.pk }}&ano={{ m.ano }}&mes={{ m.mes }}" class="btn-csv" style="padding:.28rem .65rem;font-size:.72rem;">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -194,9 +198,11 @@
               <tr>
                 <td><strong>Total</strong></td>
                 <td class="right">{{ totais.atendimentos }}</td>
+                <td class="right">{% if totais.total_horas %}{{ totais.total_horas }}{% else %}—{% endif %}</td>
                 <td class="right">R$ {{ totais.faturado }}</td>
                 <td class="right">R$ {{ totais.custos }}</td>
                 <td class="right {% if totais.lucro_positivo %}pos{% else %}neg{% endif %}">R$ {{ totais.lucro }}</td>
+                <td class="right">—</td>
                 <td class="right">—</td>
                 <td></td>
               </tr>

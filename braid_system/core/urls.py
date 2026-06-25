@@ -73,4 +73,5 @@ urlpatterns = [
     path('consultor/exportar-csv/', views.consultor_exportar_csv, name='consultor_exportar_csv'),
     path('consultor/relatorios/atendimentos/', views.consultor_relatorio_atendimentos, name='consultor_relatorio_atendimentos'),
     path('consultor/relatorios/atendimentos/csv/', views.consultor_exportar_csv_atendimentos, name='consultor_exportar_csv_atendimentos'),
+    path('consultor/dashboard-caracteristicas/', views.consultor_dashboard_caracteristicas, name='consultor_dashboard_caracteristicas'),
 ]

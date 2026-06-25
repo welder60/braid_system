@@ -1,0 +1,457 @@
+{% extends 'core/consultor_base.html' %}
+
+{% block title %}Dashboard por Características{% endblock %}
+{% block nav_dashboard_carac %}class="active"{% endblock %}
+
+{% block extra_styles %}
+
+  /* ── Filtro ── */
+  .filter-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(30,42,31,0.08);
+    padding: 1.25rem 1.4rem;
+    margin-bottom: 1.5rem;
+  }
+  .filter-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: rgba(30,42,31,0.5);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .filter-group label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(30,42,31,0.55);
+    margin-bottom: 0.3rem;
+  }
+  .filter-group select {
+    width: 100%;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid #d9cdb8;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--color-forest);
+    background: #faf8f4;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .filter-group select:focus {
+    outline: none;
+    border-color: var(--color-gold);
+  }
+
+  /* ── Seção de características ── */
+  .car-sections {
+    border-top: 1px solid #e8dfc8;
+    padding-top: 1rem;
+    margin-top: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .car-section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-moss);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .opcoes-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .opcao-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    border: 1.5px solid #d9cdb8;
+    background: #faf8f4;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    user-select: none;
+  }
+  .opcao-chip input[type="checkbox"] {
+    display: none;
+  }
+  .opcao-chip span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-forest);
+  }
+  .opcao-chip:hover {
+    border-color: var(--color-gold);
+    background: #f5f0e4;
+  }
+  .opcao-chip.checked {
+    border-color: var(--color-moss);
+    background: var(--color-moss);
+  }
+  .opcao-chip.checked span {
+    color: var(--color-sand);
+  }
+
+  /* ── Botões do filtro ── */
+  .filter-actions {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    margin-top: 1rem;
+  }
+  .btn-apply {
+    padding: 0.5rem 1.2rem;
+    background: var(--color-moss);
+    color: var(--color-sand);
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .btn-apply:hover { background: var(--color-forest); }
+  .btn-clear {
+    padding: 0.5rem 1rem;
+    background: transparent;
+    color: rgba(30,42,31,0.55);
+    border: 1px solid #d9cdb8;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .btn-clear:hover { border-color: var(--color-earth); color: var(--color-earth); }
+
+  .filtros-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: var(--color-gold);
+    color: var(--color-forest);
+    border-radius: 20px;
+    padding: 0.18rem 0.65rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-left: 0.5rem;
+  }
+
+  /* ── KPI Cards ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 1.1rem;
+    margin-bottom: 1.5rem;
+  }
+  .kpi {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(30,42,31,0.08);
+    padding: 1.1rem 1.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .kpi.accent { border-top: 3px solid var(--color-terracota); }
+  .kpi.gold   { border-top: 3px solid var(--color-gold); }
+  .kpi.moss   { border-top: 3px solid var(--color-moss); }
+  .kpi.earth  { border-top: 3px solid var(--color-earth); }
+  .kpi-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #888;
+  }
+  .kpi-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--color-forest);
+    line-height: 1.15;
+  }
+  .kpi-value .cur { font-size: 0.9rem; font-weight: 700; opacity: 0.65; margin-right: 0.1rem; }
+  .kpi-desc { font-size: 0.75rem; color: #aaa; }
+  .kpi-value.pos { color: #1a5c36; }
+  .kpi-value.neg { color: #b23b2e; }
+
+  /* ── Métricas secundárias ── */
+  .metrics-section-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: rgba(30,42,31,0.5);
+    margin-bottom: 0.75rem;
+  }
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+  @media (min-width: 560px) { .metrics { grid-template-columns: repeat(3, 1fr); } }
+  .metric {
+    background: #fff;
+    border: 1px solid #e8dfc8;
+    border-radius: 12px;
+    padding: 0.95rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    box-shadow: 0 1px 4px rgba(30,42,31,0.05);
+  }
+  .metric-top { display: flex; align-items: center; gap: 0.45rem; color: var(--color-moss); }
+  .metric-top svg { flex-shrink: 0; opacity: 0.8; }
+  .metric-label { font-size: 0.67rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: rgba(30,42,31,0.5); }
+  .metric-value { font-size: 1.25rem; font-weight: 800; color: var(--color-forest); line-height: 1.15; }
+  .metric-value .cur { font-size: 0.78rem; font-weight: 700; opacity: 0.6; margin-right: 0.1rem; }
+  .muted { color: rgba(30,42,31,0.28); }
+
+  /* ── Período exibido ── */
+  .periodo-label {
+    font-size: 0.78rem;
+    color: rgba(30,42,31,0.55);
+    margin-bottom: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  /* ── Estado sem estabelecimento ── */
+  .empty-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(30,42,31,0.08);
+    text-align: center;
+    padding: 3rem 2rem;
+  }
+
+{% endblock %}
+
+{% block content %}
+
+  <div class="page-title">
+    Dashboard por Características
+    {% if filtros_ativos %}<span class="filtros-badge">Filtros ativos</span>{% endif %}
+  </div>
+  <p class="page-subtitle">
+    {% if estabelecimento_ativo %}
+      {{ estabelecimento_ativo.nome }}
+    {% else %}
+      Selecione um estabelecimento para visualizar os dados
+    {% endif %}
+  </p>
+
+  {% if not estabelecimento_ativo %}
+
+    <div class="empty-card">
+      <div style="font-size:2.5rem;margin-bottom:.75rem;">🏢</div>
+      <strong style="font-size:1rem;color:var(--color-forest);display:block;margin-bottom:.35rem;">Nenhum estabelecimento selecionado</strong>
+      <p style="font-size:.875rem;color:#888;">Selecione um estabelecimento no menu acima para visualizar o dashboard.</p>
+    </div>
+
+  {% else %}
+
+    <!-- ── Painel de filtros ── -->
+    <div class="filter-card">
+      <div class="filter-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filtros
+      </div>
+
+      <form method="get" id="filterForm">
+
+        <!-- Período -->
+        <div class="filter-grid">
+          <div class="filter-group">
+            <label>De — mês</label>
+            <select name="mes_ini">
+              {% for num, nome in meses %}
+                <option value="{{ num }}" {% if num == mes_ini %}selected{% endif %}>{{ nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>De — ano</label>
+            <select name="ano_ini">
+              {% for ano in anos_disponiveis %}
+                <option value="{{ ano }}" {% if ano == ano_ini %}selected{% endif %}>{{ ano }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Até — mês</label>
+            <select name="mes_fim">
+              {% for num, nome in meses %}
+                <option value="{{ num }}" {% if num == mes_fim %}selected{% endif %}>{{ nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Até — ano</label>
+            <select name="ano_fim">
+              {% for ano in anos_disponiveis %}
+                <option value="{{ ano }}" {% if ano == ano_fim %}selected{% endif %}>{{ ano }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Características -->
+        {% if caracteristicas_list %}
+          <div class="car-sections">
+            {% for car in caracteristicas_list %}
+              <div>
+                <div class="car-section-title">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                  {{ car.nome }}
+                </div>
+                <div class="opcoes-grid">
+                  {% for opcao in car.opcoes.all %}
+                    {% with opcao_pk=opcao.pk|stringformat:"s" %}
+                      <label class="opcao-chip {% if opcao_pk in opcoes_selecionadas %}checked{% endif %}">
+                        <input
+                          type="checkbox"
+                          name="opcoes_{{ car.pk }}"
+                          value="{{ opcao.pk }}"
+                          {% if opcao_pk in opcoes_selecionadas %}checked{% endif %}
+                        >
+                        <span>{{ opcao.nome }}</span>
+                      </label>
+                    {% endwith %}
+                  {% endfor %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="filter-actions">
+          <button type="submit" class="btn-apply">
+            Aplicar filtros
+          </button>
+          <a href="{% url 'consultor_dashboard_caracteristicas' %}" class="btn-clear">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Limpar
+          </a>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- ── Período exibido ── -->
+    <div class="periodo-label">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      {{ data_ini|date:"d/m/Y" }} a {{ data_fim|date:"d/m/Y" }}
+      {% if filtros_ativos %}
+        &nbsp;·&nbsp;
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Características filtradas
+      {% endif %}
+    </div>
+
+    <!-- ── KPI Cards ── -->
+    <div class="kpi-grid">
+      <div class="kpi accent">
+        <span class="kpi-label">Lucro</span>
+        <span class="kpi-value {% if kpi.lucro_positivo %}pos{% else %}neg{% endif %}">
+          <span class="cur">R$</span>{{ kpi.lucro }}
+        </span>
+        <span class="kpi-desc">no período</span>
+      </div>
+      <div class="kpi gold">
+        <span class="kpi-label">Faturado</span>
+        <span class="kpi-value"><span class="cur">R$</span>{{ kpi.faturado }}</span>
+        <span class="kpi-desc">em atendimentos</span>
+      </div>
+      <div class="kpi moss">
+        <span class="kpi-label">Atendimentos</span>
+        <span class="kpi-value">{{ kpi.atendimentos }}</span>
+        <span class="kpi-desc">no período</span>
+      </div>
+      <div class="kpi earth">
+        <span class="kpi-label">Custos</span>
+        <span class="kpi-value"><span class="cur">R$</span>{{ kpi.custos }}</span>
+        <span class="kpi-desc">registrados</span>
+      </div>
+    </div>
+
+    <!-- ── Métricas secundárias ── -->
+    <div class="metrics-section-title">Indicadores detalhados</div>
+    <div class="metrics">
+
+      <div class="metric">
+        <div class="metric-top">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span class="metric-label">Duração média</span>
+        </div>
+        <div class="metric-value">
+          {% if kpi.duracao_media %}{{ kpi.duracao_media }}{% else %}<span class="muted">—</span>{% endif %}
+        </div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-top">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span class="metric-label">Lucro / atend.</span>
+        </div>
+        <div class="metric-value">
+          {% if kpi.lucro_por_atend %}<span class="cur">R$</span>{{ kpi.lucro_por_atend }}{% else %}<span class="muted">—</span>{% endif %}
+        </div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-top">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span class="metric-label">Lucro / hora</span>
+        </div>
+        <div class="metric-value">
+          {% if kpi.lucro_por_hora %}<span class="cur">R$</span>{{ kpi.lucro_por_hora }}{% else %}<span class="muted">—</span>{% endif %}
+        </div>
+      </div>
+
+    </div>
+
+  {% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Toggle visual dos chips ao clicar (estado inicial já vem do servidor via classe CSS)
+  document.querySelectorAll('.opcao-chip input[type="checkbox"]').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+      cb.closest('.opcao-chip').classList.toggle('checked', cb.checked);
+    });
+  });
+</script>
+{% endblock %}
