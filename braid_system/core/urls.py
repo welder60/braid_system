@@ -53,6 +53,7 @@ urlpatterns = [
     # Modulos principais
     path('atendimentos/', views.atendimentos, name='atendimentos'),
     path('atendimentos/criar/', views.atendimento_criar, name='atendimento_criar'),
+    path('atendimentos/verificar/', views.atendimento_verificar, name='atendimento_verificar'),
     path('atendimentos/<uuid:pk>/editar/', views.atendimento_editar, name='atendimento_editar'),
     path('atendimentos/<uuid:pk>/excluir/', views.atendimento_excluir, name='atendimento_excluir'),
     path('custos/', views.custos, name='custos'),

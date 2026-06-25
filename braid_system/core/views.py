@@ -810,6 +810,28 @@ def atendimentos(request):
     return render(request, 'core/atendimentos.html', _ctx_atendimentos(request, mes=mes, ano=ano))
 
 
+def atendimento_verificar(request):
+    """Verifica (AJAX) se cliente já foi atendido na data informada."""
+    from django.http import JsonResponse
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'auth'}, status=403)
+    estabelecimento = _get_estabelecimento_ativo(request)
+    cliente_id = request.GET.get('cliente_id', '').strip()
+    data_str = request.GET.get('data', '').strip()
+    if not estabelecimento or not cliente_id or not data_str:
+        return JsonResponse({'duplicata': False})
+    try:
+        data_obj = datetime.strptime(data_str, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'duplicata': False})
+    duplicata = Atendimento.objects.filter(
+        estabelecimento=estabelecimento,
+        cliente_id=cliente_id,
+        data=data_obj,
+    ).exists()
+    return JsonResponse({'duplicata': duplicata})
+
+
 def atendimento_criar(request):
     if not request.user.is_authenticated:
         return redirect('home')
@@ -848,6 +870,20 @@ def atendimento_criar(request):
     if pagamento_dec is None or pagamento_dec < 0:
         pagamento_dec = None
         erros.append('Informe o valor total recebido pelo serviço.')
+
+    # Data não pode ser futura
+    if data_obj and data_obj > datetime.today().date():
+        erros.append('Não é possível registrar atendimentos com data futura.')
+
+    # Mesmo cliente não pode ter mais de um atendimento no mesmo dia
+    if data_obj and cliente_id and not erros:
+        ja_atendido = Atendimento.objects.filter(
+            estabelecimento=estabelecimento,
+            cliente_id=cliente_id,
+            data=data_obj,
+        ).exists()
+        if ja_atendido:
+            erros.append('Este cliente já possui um atendimento registrado nesta data.')
 
     if erros:
         for e in erros:
@@ -1163,18 +1199,53 @@ def custo_excluir(request, pk):
     return redirect(f'/custos/?mes={mes}&ano={ano}')
 
 
+def _dias_label(dias):
+    """Retorna texto amigável para 'tempo desde o último atendimento'."""
+    if dias == 0:
+        return 'hoje'
+    if dias == 1:
+        return 'ontem'
+    if dias < 7:
+        return f'há {dias} dias'
+    if dias < 30:
+        semanas = dias // 7
+        return f'há {semanas} semanas' if semanas > 1 else 'há 1 semana'
+    if dias < 365:
+        meses = round(dias / 30)
+        return f'há {meses} mes{"es" if meses > 1 else ""}'
+    anos = round(dias / 365)
+    return f'há {anos} ano{"s" if anos > 1 else ""}'
+
+
 def _ctx_clientes(request, editando=None):
+    from datetime import date as date_cls
+    from django.db.models import Count, Max
+
     estabelecimento = _get_estabelecimento_ativo(request)
-    qs = Cliente.objects.none()
+    clientes = []
     if estabelecimento:
+        hoje = date_cls.today()
         qs = (
             Cliente.objects
             .filter(estabelecimento=estabelecimento, anonimizado=False)
+            .annotate(
+                total_atendimentos=Count('atendimentos'),
+                ultimo_atendimento=Max('atendimentos__data'),
+            )
             .order_by('apelido', 'data_cadastro')
         )
+        clientes = list(qs)
+        for c in clientes:
+            if c.ultimo_atendimento:
+                dias = (hoje - c.ultimo_atendimento).days
+                c.dias_desde_ultimo = dias
+                c.ultimo_label = _dias_label(dias)
+            else:
+                c.dias_desde_ultimo = None
+                c.ultimo_label = None
     return {
-        'clientes': qs,
-        'total_clientes': qs.count(),
+        'clientes': clientes,
+        'total_clientes': len(clientes),
         'editando': editando,
     }
 

@@ -181,6 +181,15 @@
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       margin-top: 0.1rem;
     }
+    .cliente-stats {
+      display: flex; gap: 0.6rem; margin-top: 0.25rem; flex-wrap: wrap;
+    }
+    .cliente-stat {
+      display: flex; align-items: center; gap: 0.2rem;
+      font-size: 0.72rem; color: rgba(30,42,31,0.5);
+    }
+    .cliente-stat svg { flex-shrink: 0; }
+    .cliente-stat strong { color: var(--color-earth); font-weight: 700; }
     .cliente-data {
       font-size: 0.72rem; color: rgba(30,42,31,0.4);
       white-space: nowrap; align-self: flex-start; padding-top: 0.1rem;
@@ -354,8 +363,19 @@
                   {% if cliente.descricao %}
                     <div class="cliente-desc">{{ cliente.descricao }}</div>
                   {% endif %}
+                  <div class="cliente-stats">
+                    <span class="cliente-stat">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                      <strong>{{ cliente.total_atendimentos }}</strong>&nbsp;atendimento{{ cliente.total_atendimentos|pluralize:"s" }}
+                    </span>
+                    {% if cliente.ultimo_label %}
+                      <span class="cliente-stat">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        {{ cliente.ultimo_label }}
+                      </span>
+                    {% endif %}
+                  </div>
                 </div>
-                <span class="cliente-data">{{ cliente.data_cadastro|date:"d/m/y" }}</span>
                 <div class="cliente-acoes">
                   <a class="btn-icon btn-icon-edit"
                      href="{% url 'cliente_editar' cliente.pk %}"

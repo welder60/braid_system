@@ -521,6 +521,8 @@
     ];
     const FORMA_PADRAO_ID = (FORMAS_PAGAMENTO.find(f => f.padrao) || FORMAS_PAGAMENTO[0] || {}).id || '';
     const CRIAR_URL = "{% url 'atendimento_criar' %}";
+    const VERIFICAR_URL = "{% url 'atendimento_verificar' %}";
+    const HOJE = new Date().toISOString().slice(0, 10);
     const CSRF = "{{ csrf_token }}";
     const MES_ATIVO = "{{ mes_ativo }}";
     const ANO_ATIVO = "{{ ano_ativo }}";
@@ -631,9 +633,10 @@
       return '<div class="wiz-question">Data e hora</div>'
            + '<div class="wiz-hint">Já preenchemos com agora — ajuste se precisar.</div>'
            + '<div class="field-row">'
-           + '<div><label class="wizard-label">Data *</label><input type="date" class="wizard-input" id="wData" value="'+S.data+'"></div>'
+           + '<div><label class="wizard-label">Data *</label><input type="date" class="wizard-input" id="wData" value="'+S.data+'" max="'+HOJE+'"></div>'
            + '<div><label class="wizard-label">Hora *</label><input type="time" class="wizard-input" id="wHora" value="'+S.hora+'"></div>'
-           + '</div>';
+           + '</div>'
+           + '<div id="wizDataErro" style="color:#c0392b;font-size:0.82rem;margin-top:0.6rem;display:none"></div>';
     }
 
     function htmlPagamento(){
@@ -748,7 +751,18 @@
         if (S.novoCliente){ novoBtn.classList.add('show','selected'); document.getElementById('cliNovoTxt').textContent = 'Criar novo cliente: "'+S.novoCliente+'"'; busca.value = S.novoCliente; }
       }
       else if (page.t === 'datahora'){
-        document.getElementById('wData').oninput = e => { S.data = e.target.value; atualizarNext(); };
+        document.getElementById('wData').oninput = e => {
+          S.data = e.target.value;
+          const erroEl = document.getElementById('wizDataErro');
+          if (S.data && S.data > HOJE) {
+            erroEl.textContent = 'Não é possível registrar atendimentos com data futura.';
+            erroEl.style.display = '';
+          } else {
+            erroEl.textContent = '';
+            erroEl.style.display = 'none';
+          }
+          atualizarNext();
+        };
         document.getElementById('wHora').oninput = e => { S.hora = e.target.value; atualizarNext(); };
       }
       else if (page.t === 'pagamento'){
@@ -804,7 +818,7 @@
     // ───────────── Validação / navegação ─────────────
     function pageValida(page){
       if (page.t === 'cliente')   return !!(S.clienteId || S.novoCliente);
-      if (page.t === 'datahora')  return !!(S.data && S.hora);
+      if (page.t === 'datahora')  return !!(S.data && S.hora) && S.data <= HOJE;
       if (page.t === 'pagamento') return S.pagamento !== '' && parseFloat(S.pagamento) >= 0 && !isNaN(parseFloat(S.pagamento));
       return true;
     }
@@ -814,9 +828,24 @@
       if (!next) return;
       next.disabled = REQUIRED.has(page.t) && !pageValida(page);
     }
-    function proximo(){
+    async function proximo(){
       const page = flow[idx];
       if (REQUIRED.has(page.t) && !pageValida(page)) return;
+      if (page.t === 'datahora' && S.clienteId) {
+        const erroEl = document.getElementById('wizDataErro');
+        try {
+          const r = await fetch(VERIFICAR_URL + '?cliente_id=' + encodeURIComponent(S.clienteId) + '&data=' + encodeURIComponent(S.data));
+          const json = await r.json();
+          if (json.duplicata) {
+            erroEl.textContent = 'Este cliente já possui um atendimento registrado nesta data.';
+            erroEl.style.display = '';
+            return;
+          } else {
+            erroEl.textContent = '';
+            erroEl.style.display = 'none';
+          }
+        } catch(_) { /* falha silenciosa: servidor valida de qualquer forma */ }
+      }
       if (idx === flow.length - 1){ submitWizard(); return; }
       idx++; render();
     }
