@@ -190,6 +190,69 @@
       text-align: center;
       flex-shrink: 0;
     }
+
+    /* ── Sidebar grupos colapsáveis ── */
+    .sidebar-group { border-left: 3px solid transparent; }
+    .sidebar-group summary {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.6rem 1.1rem;
+      color: rgba(231,218,193,0.72);
+      font-size: 0.875rem;
+      cursor: pointer;
+      list-style: none;
+      transition: background 0.15s, color 0.15s;
+      user-select: none;
+    }
+    .sidebar-group summary::-webkit-details-marker { display: none; }
+    .sidebar-group summary:hover {
+      background: rgba(200,161,90,0.12);
+      color: var(--color-sand);
+    }
+    .sidebar-group[open] summary {
+      color: var(--color-sand);
+    }
+    .sidebar-group summary .icon {
+      font-size: 1rem;
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .sidebar-group summary .chevron {
+      margin-left: auto;
+      font-size: 0.65rem;
+      opacity: 0.5;
+      transition: transform 0.2s;
+    }
+    .sidebar-group[open] summary .chevron { transform: rotate(180deg); opacity: 0.8; }
+    .sidebar-submenu {
+      list-style: none;
+      padding-bottom: 0.3rem;
+    }
+    .sidebar-submenu li a {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.45rem 1.1rem 0.45rem 2.5rem;
+      color: rgba(231,218,193,0.58);
+      text-decoration: none;
+      font-size: 0.82rem;
+      transition: background 0.15s, color 0.15s;
+      border-left: 3px solid transparent;
+    }
+    .sidebar-submenu li a:hover,
+    .sidebar-submenu li a.active {
+      background: rgba(200,161,90,0.10);
+      color: var(--color-sand);
+      border-left-color: var(--color-gold);
+    }
+    .sidebar-submenu li a .icon {
+      font-size: 0.85rem;
+      width: 16px;
+      text-align: center;
+      flex-shrink: 0;
+    }
     .sidebar-divider {
       border: none;
       border-top: 1px solid rgba(255,255,255,0.07);
@@ -354,18 +417,35 @@
 
       <div class="sidebar-section">
         <p class="sidebar-section-title">Painel</p>
-        <ul class="sidebar-menu">
-          <li>
-            <a href="{% url 'consultor_painel' %}" {% block nav_painel %}{% endblock %}>
-              <span class="icon">📊</span> Dashboard
-            </a>
-          </li>
-          <li>
-            <a href="{% url 'consultor_relatorios' %}" {% block nav_relatorios %}{% endblock %}>
-              <span class="icon">📋</span> Relatórios
-            </a>
-          </li>
-        </ul>
+
+        <details class="sidebar-group" {% block nav_dashboards_open %}{% endblock %}>
+          <summary>
+            <span class="icon">📊</span> Dashboards
+            <span class="chevron">▼</span>
+          </summary>
+          <ul class="sidebar-submenu">
+            <li>
+              <a href="{% url 'consultor_painel' %}" {% block nav_painel %}{% endblock %}>
+                <span class="icon">🏠</span> Visão Geral
+              </a>
+            </li>
+          </ul>
+        </details>
+
+        <details class="sidebar-group" {% block nav_relatorios_open %}{% endblock %}>
+          <summary>
+            <span class="icon">📋</span> Relatórios
+            <span class="chevron">▼</span>
+          </summary>
+          <ul class="sidebar-submenu">
+            <li>
+              <a href="{% url 'consultor_relatorios' %}" {% block nav_relatorios %}{% endblock %}>
+                <span class="icon">📄</span> Relatório Geral
+              </a>
+            </li>
+          </ul>
+        </details>
+
       </div>
 
       <hr class="sidebar-divider">
