@@ -15,17 +15,19 @@ from .models import (
     Atendimento, Pagamento, AtendimentoCaracteristica, FormaPagamento,
 )
 from braid_system.security.models.usuario import Usuario
+from .access import is_admin, get_estabelecimento_ativo
 
 
-# Tipos de usuário com acesso à área de administrador.
-TIPOS_ADMIN = ('admin', 'consultor')
+# Apenas o papel 'admin' é administrador para fins de isolamento de dados.
+# (O papel 'consultor' NÃO é exceção: vê somente estabelecimentos vinculados.)
+TIPOS_ADMIN = ('admin',)
 
 
 def admin_required(view_func):
     """
     Restringe o acesso à área de administrador.
 
-    Exige usuário autenticado E com papel administrativo (admin ou consultor).
+    Exige usuário autenticado E com papel administrativo (apenas admin).
     Quem não está logado vai para a tela de login; quem está logado mas não tem
     permissão é redirecionado para a gestão com uma mensagem.
     """
@@ -34,7 +36,7 @@ def admin_required(view_func):
         if not request.user.is_authenticated:
             messages.error(request, 'Faça login para acessar a administração.')
             return redirect('home')
-        if getattr(request.user, 'tipo', None) not in TIPOS_ADMIN:
+        if not is_admin(request.user):
             messages.error(request, 'Acesso restrito à área de administrador.')
             return redirect('gestao')
         return view_func(request, *args, **kwargs)
@@ -73,13 +75,17 @@ def perfil(request):
     if not request.user.is_authenticated:
         return redirect('home')
 
-    vinculos = (
-        EstabelecimentoUsuario.objects
-        .filter(usuario=request.user)
-        .select_related('estabelecimento')
-        .order_by('estabelecimento__nome')
-    )
-    estabelecimentos_usuario = [v.estabelecimento for v in vinculos]
+    if is_admin(request.user):
+        # Admin pode operar sobre qualquer estabelecimento.
+        estabelecimentos_usuario = list(Estabelecimento.objects.order_by('nome'))
+    else:
+        vinculos = (
+            EstabelecimentoUsuario.objects
+            .filter(usuario=request.user)
+            .select_related('estabelecimento')
+            .order_by('estabelecimento__nome')
+        )
+        estabelecimentos_usuario = [v.estabelecimento for v in vinculos]
 
     if request.method == 'POST':
         est_id = request.POST.get('estabelecimento_id', '').strip()
@@ -1036,14 +1042,12 @@ def atendimento_excluir(request, pk):
 
 
 def _get_estabelecimento_ativo(request):
-    """Retorna o Estabelecimento ativo da sessão ou None."""
-    est_id = request.session.get('estabelecimento_ativo_id')
-    if not est_id:
-        return None
-    try:
-        return Estabelecimento.objects.get(pk=est_id)
-    except Estabelecimento.DoesNotExist:
-        return None
+    """Estabelecimento ativo da sessão, já validado contra o vínculo do usuário.
+
+    Delegado a access.get_estabelecimento_ativo: usuários não-admin só obtêm
+    estabelecimentos aos quais estão vinculados; o admin obtém qualquer um.
+    """
+    return get_estabelecimento_ativo(request)
 
 
 def _ctx_custos(request, editando=None, mes=None, ano=None):
@@ -1165,7 +1169,10 @@ def custo_criar(request):
 def custo_editar(request, pk):
     if not request.user.is_authenticated:
         return redirect('home')
-    custo = get_object_or_404(Custo, pk=pk, atendimento__isnull=True)
+    custo = get_object_or_404(
+        Custo, pk=pk, atendimento__isnull=True,
+        estabelecimento=_get_estabelecimento_ativo(request),
+    )
     mes = int(request.GET.get('mes', custo.data.month))
     ano = int(request.GET.get('ano', custo.data.year))
 
@@ -1199,7 +1206,10 @@ def custo_editar(request, pk):
 def custo_excluir(request, pk):
     if not request.user.is_authenticated:
         return redirect('home')
-    custo = get_object_or_404(Custo, pk=pk, atendimento__isnull=True)
+    custo = get_object_or_404(
+        Custo, pk=pk, atendimento__isnull=True,
+        estabelecimento=_get_estabelecimento_ativo(request),
+    )
     mes = custo.data.month
     ano = custo.data.year
     if request.method == 'POST':
@@ -1292,7 +1302,9 @@ def cliente_criar(request):
 def cliente_editar(request, pk):
     if not request.user.is_authenticated:
         return redirect('home')
-    cliente = get_object_or_404(Cliente, pk=pk)
+    cliente = get_object_or_404(
+        Cliente, pk=pk, estabelecimento=_get_estabelecimento_ativo(request)
+    )
 
     if request.method == 'POST':
         apelido = request.POST.get('apelido', '').strip()
@@ -1313,7 +1325,9 @@ def cliente_editar(request, pk):
 def cliente_excluir(request, pk):
     if not request.user.is_authenticated:
         return redirect('home')
-    cliente = get_object_or_404(Cliente, pk=pk)
+    cliente = get_object_or_404(
+        Cliente, pk=pk, estabelecimento=_get_estabelecimento_ativo(request)
+    )
     if request.method == 'POST':
         apelido = cliente.apelido
         cliente.delete()
@@ -1437,7 +1451,7 @@ def relatorios(request):
 
 
 # ── Proteção da área de administrador ────────────────────────────────────────
-# Aplica login + verificação de papel (admin/consultor) a todas as views do
+# Aplica login + verificação de papel (apenas admin) a todas as views do
 # painel administrativo de forma centralizada — um único ponto de auditoria.
 # Uma view nova de admin só fica protegida ao ser adicionada nesta lista.
 _ADMIN_VIEWS = (

@@ -1,27 +1,14 @@
-from .models import Estabelecimento, EstabelecimentoUsuario
+from .access import get_estabelecimento_ativo
 
 
 def estabelecimento_ativo(request):
-    """Injeta o estabelecimento atualmente selecionado na sessão."""
+    """Injeta o estabelecimento ativo (ja autorizado) na sessao.
+
+    A resolucao e delegada a braid_system.core.access.get_estabelecimento_ativo,
+    que garante que apenas estabelecimentos vinculados (ou qualquer um, no caso
+    de admin) sejam considerados. Mantem a auto-selecao quando ha um unico
+    vinculo, preservando a experiencia anterior.
+    """
     if not request.user.is_authenticated:
         return {}
-
-    est_id = request.session.get('estabelecimento_ativo_id')
-    if est_id:
-        try:
-            est = Estabelecimento.objects.get(pk=est_id)
-            return {'estabelecimento_ativo': est}
-        except Estabelecimento.DoesNotExist:
-            pass
-
-    # Tenta definir automaticamente se houver apenas um vínculo
-    vinculos = EstabelecimentoUsuario.objects.filter(
-        usuario=request.user
-    ).select_related('estabelecimento')
-
-    if vinculos.count() == 1:
-        est = vinculos.first().estabelecimento
-        request.session['estabelecimento_ativo_id'] = str(est.pk)
-        return {'estabelecimento_ativo': est}
-
-    return {'estabelecimento_ativo': None}
+    return {'estabelecimento_ativo': get_estabelecimento_ativo(request, auto_select=True)}

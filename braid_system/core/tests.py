@@ -327,6 +327,7 @@ class ContextProcessorTests(TestCase):
     def test_session_valida_retorna_estabelecimento(self):
         est = criar_estabelecimento()
         user = criar_usuario()
+        EstabelecimentoUsuario.objects.create(estabelecimento=est, usuario=user)
         req = self._req(user, {'estabelecimento_ativo_id': str(est.pk)})
         self.assertEqual(estabelecimento_ativo(req)['estabelecimento_ativo'], est)
 
@@ -421,10 +422,18 @@ class AutenticadoComEstabelecimentoMixin:
         sessao.save()
 
 
+class AdminLogadoMixin:
+    """Loga um usuario tipo='admin' (o painel administrativo exige admin)."""
+    def setUp(self):
+        super().setUp()
+        self.admin = criar_usuario(email='admin-painel@b.com', nome='Admin Painel', tipo='admin')
+        self.client.force_login(self.admin)
+
+
 # ===========================================================================
 # 8. CRUD de estabelecimentos
 # ===========================================================================
-class EstabelecimentoViewTests(TestCase):
+class EstabelecimentoViewTests(AdminLogadoMixin, TestCase):
     def test_listar(self):
         criar_estabelecimento('A')
         self.assertEqual(self.client.get(reverse('estabelecimentos')).status_code, 200)
@@ -467,7 +476,7 @@ class EstabelecimentoViewTests(TestCase):
 # ===========================================================================
 # 9. CRUD de categorias de custo
 # ===========================================================================
-class CategoriaCustoViewTests(TestCase):
+class CategoriaCustoViewTests(AdminLogadoMixin, TestCase):
     def test_listar(self):
         self.assertEqual(self.client.get(reverse('categorias_custo')).status_code, 200)
 
@@ -507,7 +516,7 @@ class CategoriaCustoViewTests(TestCase):
 # ===========================================================================
 # 10. CRUD de caracteristicas e suas opcoes
 # ===========================================================================
-class CaracteristicaViewTests(TestCase):
+class CaracteristicaViewTests(AdminLogadoMixin, TestCase):
     def test_criar_valido(self):
         resp = self.client.post(reverse('caracteristica_atendimento_criar'),
                                 {'nome': 'Tipo', 'pergunta': 'Qual tipo?', 'ordem': '1',
@@ -564,7 +573,7 @@ class CaracteristicaViewTests(TestCase):
 # ===========================================================================
 # 11. CRUD de usuarios (painel admin)
 # ===========================================================================
-class UsuarioViewTests(TestCase):
+class UsuarioViewTests(AdminLogadoMixin, TestCase):
     def test_listar(self):
         self.assertEqual(self.client.get(reverse('usuarios')).status_code, 200)
 
@@ -586,7 +595,8 @@ class UsuarioViewTests(TestCase):
     def test_criar_campos_faltando(self):
         resp = self.client.post(reverse('usuario_criar'), {'nome': 'X'})
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(Usuario.objects.count(), 0)
+        # admin logado ja conta como 1 usuario; garantimos que o alvo nao foi criado
+        self.assertFalse(Usuario.objects.filter(nome='X').exists())
 
     def test_editar_desativa(self):
         u = criar_usuario(email='e@b.com', nome='Edita')
@@ -908,7 +918,7 @@ class PerfilViewTests(TestCase):
         self.assertNotIn('estabelecimento_ativo_id', self.client.session)
 
 
-class EditFormRenderTests(TestCase):
+class EditFormRenderTests(AdminLogadoMixin, TestCase):
     """GET nos formularios de edicao deve renderizar (ramo 'editando')."""
 
     def test_estabelecimento_editar_get(self):
@@ -983,3 +993,95 @@ class EditFormRenderTenantTests(AutenticadoComEstabelecimentoMixin, TestCase):
         custo = Custo.objects.create(estabelecimento=self.est, categoria_custo=cat,
                                      descricao='X', data=date(2026, 6, 1), valor=Decimal('100'))
         self.assertEqual(self.client.get(reverse('custo_editar', args=[custo.pk])).status_code, 200)
+
+
+# ===========================================================================
+# 17. Isolamento de estabelecimentos (requisito de seguranca)
+# ===========================================================================
+class AdminPainelAcessoTests(TestCase):
+    """Painel administrativo: somente tipo='admin' acessa."""
+
+    ROTAS = [
+        'admin_painel', 'estabelecimentos', 'usuarios', 'acessos_estabelecimento',
+        'categorias_custo', 'caracteristicas_atendimento', 'formas_pagamento',
+    ]
+
+    def test_anonimo_redireciona_para_home(self):
+        for nome in self.ROTAS:
+            with self.subTest(rota=nome):
+                self.assertRedirects(self.client.get(reverse(nome)), reverse('home'))
+
+    def test_profissional_redireciona_para_gestao(self):
+        self.client.force_login(criar_usuario(email='pro2@b.com', tipo='profissional'))
+        for nome in self.ROTAS:
+            with self.subTest(rota=nome):
+                self.assertRedirects(self.client.get(reverse(nome)), reverse('gestao'))
+
+    def test_consultor_nao_e_admin(self):
+        # Decisao do time: 'consultor' NAO bypassa a restricao de estabelecimentos.
+        self.client.force_login(criar_usuario(email='cons@b.com', tipo='consultor'))
+        self.assertRedirects(self.client.get(reverse('estabelecimentos')), reverse('gestao'))
+        self.assertRedirects(self.client.get(reverse('acessos_estabelecimento')), reverse('gestao'))
+
+    def test_admin_acessa_todas_as_rotas(self):
+        self.client.force_login(criar_usuario(email='adm@b.com', tipo='admin'))
+        for nome in self.ROTAS:
+            with self.subTest(rota=nome):
+                self.assertEqual(self.client.get(reverse(nome)).status_code, 200)
+
+
+class IsolamentoDadosTests(TestCase):
+    """Dados operacionais visiveis apenas a vinculados (admin a parte)."""
+
+    def setUp(self):
+        self.user = criar_usuario(email='pro@b.com', tipo='profissional')
+        self.est_ok = criar_estabelecimento('Vinculado')
+        self.est_alheio = criar_estabelecimento('Alheio')
+        EstabelecimentoUsuario.objects.create(estabelecimento=self.est_ok, usuario=self.user)
+        self.client.force_login(self.user)
+        self._ativar(self.est_ok)
+
+    def _ativar(self, est):
+        s = self.client.session
+        s['estabelecimento_ativo_id'] = str(est.pk)
+        s.save()
+
+    def test_sessao_para_estabelecimento_nao_vinculado_e_ignorada(self):
+        Cliente.objects.create(estabelecimento=self.est_alheio, apelido='Secreto')
+        self._ativar(self.est_alheio)  # tenta forcar um estabelecimento alheio
+        resp = self.client.get(reverse('clientes'))
+        self.assertEqual(list(resp.context['clientes']), [])
+
+    def test_acesso_revogado_esconde_dados(self):
+        Cliente.objects.create(estabelecimento=self.est_ok, apelido='Antigo')
+        EstabelecimentoUsuario.objects.filter(
+            usuario=self.user, estabelecimento=self.est_ok).delete()
+        resp = self.client.get(reverse('clientes'))
+        self.assertEqual(list(resp.context['clientes']), [])
+
+    def test_idor_cliente_de_outro_estabelecimento_404(self):
+        c = Cliente.objects.create(estabelecimento=self.est_alheio, apelido='De Alheio')
+        self.assertEqual(
+            self.client.post(reverse('cliente_editar', args=[c.pk]), {'apelido': 'x'}).status_code, 404)
+        self.assertEqual(
+            self.client.post(reverse('cliente_excluir', args=[c.pk])).status_code, 404)
+        self.assertTrue(Cliente.objects.filter(pk=c.pk).exists())
+
+    def test_idor_custo_de_outro_estabelecimento_404(self):
+        cat = CategoriaCusto.objects.create(nome='Aluguel', vinculado_atendimento=False)
+        custo = Custo.objects.create(
+            estabelecimento=self.est_alheio, categoria_custo=cat,
+            descricao='X', data=date(2026, 6, 1), valor=Decimal('10'))
+        self.assertEqual(
+            self.client.post(reverse('custo_editar', args=[custo.pk]), {}).status_code, 404)
+        self.assertEqual(
+            self.client.post(reverse('custo_excluir', args=[custo.pk])).status_code, 404)
+        self.assertTrue(Custo.objects.filter(pk=custo.pk).exists())
+
+    def test_admin_ve_qualquer_estabelecimento(self):
+        Cliente.objects.create(estabelecimento=self.est_alheio, apelido='Visivel ao admin')
+        self.client.force_login(criar_usuario(email='adm2@b.com', tipo='admin'))
+        self._ativar(self.est_alheio)
+        resp = self.client.get(reverse('clientes'))
+        apelidos = {c.apelido for c in resp.context['clientes']}
+        self.assertIn('Visivel ao admin', apelidos)
