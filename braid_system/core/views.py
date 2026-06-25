@@ -1482,39 +1482,47 @@ def _consultor_required(view_func):
     return _wrapped
 
 
-def _resolve_estabelecimento_consultor(request):
-    """
-    Resolve qual estabelecimento está ativo para o consultor.
-    Respeita a sessão existente se ainda for válida para este usuário;
-    caso contrário, escolhe o primeiro disponível.
-    """
-    disponiveis = _get_estabelecimentos_consultor(request.user)
-    if not disponiveis:
-        return None, []
 
-    est_id = request.session.get('consultor_est_id')
+SESSION_KEY_CONSULTOR_EST = 'consultor_estabelecimento_id'
+
+
+def _get_consultor_context_base(request):
+    """Contexto compartilhado por todas as views do painel do consultor."""
+    estabelecimentos = _get_estabelecimentos_consultor(request.user)
+    est_id = request.session.get(SESSION_KEY_CONSULTOR_EST)
+    estabelecimento_ativo = None
     if est_id:
-        ids_validos = {str(e.pk) for e in disponiveis}
-        if est_id in ids_validos:
-            est = next((e for e in disponiveis if str(e.pk) == est_id), None)
-            if est:
-                return est, disponiveis
-        # id inválido — limpa
-        request.session.pop('consultor_est_id', None)
+        for e in estabelecimentos:
+            if str(e.pk) == str(est_id):
+                estabelecimento_ativo = e
+                break
+    if estabelecimento_ativo is None and len(estabelecimentos) == 1:
+        estabelecimento_ativo = estabelecimentos[0]
+        request.session[SESSION_KEY_CONSULTOR_EST] = str(estabelecimento_ativo.pk)
+    return {
+        'estabelecimentos_disponiveis': estabelecimentos,
+        'estabelecimento_ativo': estabelecimento_ativo,
+        'estabelecimento_ativo_id': str(estabelecimento_ativo.pk) if estabelecimento_ativo else None,
+    }
 
-    # Escolhe o primeiro da lista e persiste
-    est = disponiveis[0]
-    request.session['consultor_est_id'] = str(est.pk)
-    return est, disponiveis
+
+@_consultor_required
+def consultor_trocar_estabelecimento(request):
+    if request.method == 'POST':
+        est_id = request.POST.get('estabelecimento_id', '')
+        if est_id:
+            request.session[SESSION_KEY_CONSULTOR_EST] = est_id
+    next_url = request.POST.get('next', '') or 'consultor_painel'
+    return redirect(next_url)
 
 
-def _build_relatorios_meses(estabelecimento, ano_filtro=None):
-    """
-    Monta a lista de meses com métricas para um estabelecimento.
-    Se ano_filtro for informado, filtra apenas aquele ano.
-    """
+@_consultor_required
+def consultor_painel(request):
     from datetime import date as date_cls
     from django.db.models import Sum, Count
+
+    ctx = _get_consultor_context_base(request)
+    estabelecimento = ctx['estabelecimento_ativo']
 
     MESES_PT = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
                 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -1522,337 +1530,431 @@ def _build_relatorios_meses(estabelecimento, ano_filtro=None):
                      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
     hoje = date_cls.today()
-
-    chaves = set()
-    qs_at = Atendimento.objects.filter(estabelecimento=estabelecimento)
-    qs_cu = Custo.objects.filter(estabelecimento=estabelecimento)
-    if ano_filtro:
-        qs_at = qs_at.filter(data__year=ano_filtro)
-        qs_cu = qs_cu.filter(data__year=ano_filtro)
-    for d in qs_at.dates('data', 'month'):
-        chaves.add((d.year, d.month))
-    for d in qs_cu.dates('data', 'month'):
-        chaves.add((d.year, d.month))
-    if not ano_filtro or ano_filtro == hoje.year:
-        chaves.add((hoje.year, hoje.month))
-
-    resultado = []
-    for ano, mes in sorted(chaves):
-        at_agg = (
-            Atendimento.objects
-            .filter(estabelecimento=estabelecimento, data__year=ano, data__month=mes)
-            .aggregate(qtd=Count('id'), minutos=Sum('duracao'))
-        )
-        total_atend = at_agg['qtd'] or 0
-        total_min = at_agg['minutos'] or 0
-
-        faturado = (
-            Pagamento.objects
-            .filter(
-                atendimento__estabelecimento=estabelecimento,
-                atendimento__data__year=ano,
-                atendimento__data__month=mes,
-            )
-            .aggregate(s=Sum('valor'))['s']
-        ) or Decimal('0')
-
-        custos_total = (
-            Custo.objects
-            .filter(estabelecimento=estabelecimento, data__year=ano, data__month=mes)
-            .aggregate(s=Sum('valor'))['s']
-        ) or Decimal('0')
-
-        lucro = faturado - custos_total
-        horas_dec = (Decimal(total_min) / Decimal(60)) if total_min else Decimal('0')
-        lucro_por_atend = (lucro / total_atend) if total_atend else None
-        lucro_por_hora = (lucro / horas_dec) if horas_dec else None
-        duracao_media_min = round(total_min / total_atend) if total_atend else None
-
-        resultado.append({
-            'ano': ano,
-            'mes': mes,
-            'label_curto': f'{MESES_PT[mes]}/{str(ano)[2:]}',
-            'label_full': f'{MESES_PT_FULL[mes]} de {ano}',
-            'total_atendimentos': total_atend,
-            'duracao_media': _fmt_horas_br(duracao_media_min) if duracao_media_min is not None else None,
-            'total_faturado': _fmt_money_br(faturado),
-            'total_custos': _fmt_money_br(custos_total),
-            'lucro_total': _fmt_money_br(lucro),
-            'lucro_positivo': lucro >= 0,
-            'lucro_por_atendimento': _fmt_money_br(lucro_por_atend) if lucro_por_atend is not None else None,
-            'lucro_por_hora': _fmt_money_br(lucro_por_hora) if lucro_por_hora is not None else None,
-            # valores decimais brutos para CSV e totalizador
-            '_faturado': faturado,
-            '_custos': custos_total,
-            '_lucro': lucro,
-            '_atendimentos': total_atend,
-        })
-    return resultado
-
-
-@_consultor_required
-def consultor_painel(request):
-    """Dashboard principal do painel do consultor."""
-    from datetime import date as date_cls
-    from django.db.models import Sum, Count
-
-    estabelecimento_ativo, disponiveis = _resolve_estabelecimento_consultor(request)
-
-    kpi = {}
     relatorios_meses = []
     indice_inicial = 0
+    kpi = {
+        'lucro_mes': _fmt_money_br(Decimal('0')),
+        'lucro_positivo': True,
+        'faturado_mes': _fmt_money_br(Decimal('0')),
+        'atendimentos_mes': 0,
+        'custos_mes': _fmt_money_br(Decimal('0')),
+        'mes_corrente': MESES_PT_FULL[hoje.month],
+    }
 
-    if estabelecimento_ativo:
-        hoje = date_cls.today()
-        MESES_PT_FULL = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-                         'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+    if estabelecimento:
+        chaves = set()
+        for d in Atendimento.objects.filter(estabelecimento=estabelecimento).dates('data', 'month'):
+            chaves.add((d.year, d.month))
+        for d in Custo.objects.filter(estabelecimento=estabelecimento).dates('data', 'month'):
+            chaves.add((d.year, d.month))
+        chaves.add((hoje.year, hoje.month))
 
-        at_agg = (
-            Atendimento.objects
-            .filter(estabelecimento=estabelecimento_ativo, data__year=hoje.year, data__month=hoje.month)
-            .aggregate(qtd=Count('id'), minutos=Sum('duracao'))
-        )
-        faturado_mes = (
-            Pagamento.objects
-            .filter(
-                atendimento__estabelecimento=estabelecimento_ativo,
-                atendimento__data__year=hoje.year,
-                atendimento__data__month=hoje.month,
+        for ano, mes in sorted(chaves):
+            at_agg = (
+                Atendimento.objects
+                .filter(estabelecimento=estabelecimento, data__year=ano, data__month=mes)
+                .aggregate(qtd=Count('id'), minutos=Sum('duracao'))
             )
-            .aggregate(s=Sum('valor'))['s']
-        ) or Decimal('0')
-        custos_mes = (
-            Custo.objects
-            .filter(estabelecimento=estabelecimento_ativo, data__year=hoje.year, data__month=hoje.month)
-            .aggregate(s=Sum('valor'))['s']
-        ) or Decimal('0')
-        lucro_mes = faturado_mes - custos_mes
+            total_atend = at_agg['qtd'] or 0
+            total_min = at_agg['minutos'] or 0
 
-        kpi = {
-            'mes_corrente': f'{MESES_PT_FULL[hoje.month]} de {hoje.year}',
-            'atendimentos_mes': at_agg['qtd'] or 0,
-            'faturado_mes': _fmt_money_br(faturado_mes),
-            'custos_mes': _fmt_money_br(custos_mes),
-            'lucro_mes': _fmt_money_br(lucro_mes),
-            'lucro_positivo': lucro_mes >= 0,
-        }
+            faturado = (
+                Pagamento.objects
+                .filter(
+                    atendimento__estabelecimento=estabelecimento,
+                    atendimento__data__year=ano,
+                    atendimento__data__month=mes,
+                )
+                .aggregate(s=Sum('valor'))['s']
+            ) or Decimal('0')
 
-        relatorios_meses = _build_relatorios_meses(estabelecimento_ativo)
+            custos_total = (
+                Custo.objects
+                .filter(estabelecimento=estabelecimento, data__year=ano, data__month=mes)
+                .aggregate(s=Sum('valor'))['s']
+            ) or Decimal('0')
+
+            lucro = faturado - custos_total
+            horas_dec = (Decimal(total_min) / Decimal(60)) if total_min else Decimal('0')
+            lucro_por_atend = (lucro / total_atend) if total_atend else None
+            lucro_por_hora = (lucro / horas_dec) if horas_dec else None
+            duracao_media_min = round(total_min / total_atend) if total_atend else None
+
+            relatorios_meses.append({
+                'ano': ano,
+                'mes': mes,
+                'label_curto': f'{MESES_PT[mes]}/{str(ano)[2:]}',
+                'label_full': f'{MESES_PT_FULL[mes]} de {ano}',
+                'total_atendimentos': total_atend,
+                'duracao_media': _fmt_horas_br(duracao_media_min) if duracao_media_min is not None else None,
+                'total_faturado': _fmt_money_br(faturado),
+                'total_custos': _fmt_money_br(custos_total),
+                'lucro_total': _fmt_money_br(lucro),
+                'lucro_positivo': lucro >= 0,
+                'lucro_por_atendimento': _fmt_money_br(lucro_por_atend) if lucro_por_atend is not None else None,
+                'lucro_por_hora': _fmt_money_br(lucro_por_hora) if lucro_por_hora is not None else None,
+            })
+
         indice_inicial = next(
             (i for i, m in enumerate(relatorios_meses)
              if m['ano'] == hoje.year and m['mes'] == hoje.month),
             len(relatorios_meses) - 1 if relatorios_meses else 0,
         )
 
-    return render(request, 'core/consultor_painel.html', {
-        'estabelecimento_ativo': estabelecimento_ativo,
-        'estabelecimento_ativo_id': estabelecimento_ativo.pk if estabelecimento_ativo else None,
-        'estabelecimentos_disponiveis': disponiveis,
-        'kpi': kpi,
+        kpi_mes = next(
+            (m for m in relatorios_meses if m['ano'] == hoje.year and m['mes'] == hoje.month),
+            None,
+        )
+        if kpi_mes:
+            kpi = {
+                'lucro_mes': kpi_mes['lucro_total'],
+                'lucro_positivo': kpi_mes['lucro_positivo'],
+                'faturado_mes': kpi_mes['total_faturado'],
+                'atendimentos_mes': kpi_mes['total_atendimentos'],
+                'custos_mes': kpi_mes['total_custos'],
+                'mes_corrente': kpi_mes['label_full'],
+            }
+
+    ctx.update({
         'relatorios_meses': relatorios_meses,
         'indice_inicial': indice_inicial,
+        'kpi': kpi,
     })
+    return render(request, 'core/consultor_painel.html', ctx)
 
 
 @_consultor_required
 def consultor_relatorios(request):
-    """Página de relatórios anuais com tabela e exportação por mês."""
     from datetime import date as date_cls
-    from django.db.models import Sum
+    from django.db.models import Sum, Count
 
-    estabelecimento_ativo, disponiveis = _resolve_estabelecimento_consultor(request)
+    ctx = _get_consultor_context_base(request)
+    estabelecimento = ctx['estabelecimento_ativo']
 
-    relatorios_meses = []
+    MESES_PT = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+    hoje = date_cls.today()
     anos_disponiveis = []
-    ano_selecionado = date_cls.today().year
+    relatorios_meses = []
     totais = {}
 
-    if estabelecimento_ativo:
-        # Anos disponíveis
+    try:
+        ano_selecionado = int(request.GET.get('ano', hoje.year))
+    except (ValueError, TypeError):
+        ano_selecionado = hoje.year
+
+    if estabelecimento:
         anos_set = set()
-        for d in Atendimento.objects.filter(estabelecimento=estabelecimento_ativo).dates('data', 'year'):
+        for d in Atendimento.objects.filter(estabelecimento=estabelecimento).dates('data', 'year'):
             anos_set.add(d.year)
-        for d in Custo.objects.filter(estabelecimento=estabelecimento_ativo).dates('data', 'year'):
+        for d in Custo.objects.filter(estabelecimento=estabelecimento).dates('data', 'year'):
             anos_set.add(d.year)
-        anos_set.add(date_cls.today().year)
+        anos_set.add(hoje.year)
         anos_disponiveis = sorted(anos_set, reverse=True)
 
-        try:
-            ano_selecionado = int(request.GET.get('ano', date_cls.today().year))
-        except (ValueError, TypeError):
-            ano_selecionado = date_cls.today().year
-
         if ano_selecionado not in anos_disponiveis:
-            ano_selecionado = anos_disponiveis[0] if anos_disponiveis else date_cls.today().year
+            ano_selecionado = hoje.year
 
-        relatorios_meses = _build_relatorios_meses(estabelecimento_ativo, ano_filtro=ano_selecionado)
+        for mes in range(1, 13):
+            at_agg = (
+                Atendimento.objects
+                .filter(estabelecimento=estabelecimento, data__year=ano_selecionado, data__month=mes)
+                .aggregate(qtd=Count('id'), minutos=Sum('duracao'))
+            )
+            faturado = (
+                Pagamento.objects
+                .filter(
+                    atendimento__estabelecimento=estabelecimento,
+                    atendimento__data__year=ano_selecionado,
+                    atendimento__data__month=mes,
+                )
+                .aggregate(s=Sum('valor'))['s']
+            ) or Decimal('0')
+            custos_total = (
+                Custo.objects
+                .filter(estabelecimento=estabelecimento, data__year=ano_selecionado, data__month=mes)
+                .aggregate(s=Sum('valor'))['s']
+            ) or Decimal('0')
+            total_atend = at_agg['qtd'] or 0
+            total_min = at_agg['minutos'] or 0
+            lucro = faturado - custos_total
+            horas_dec = (Decimal(total_min) / Decimal(60)) if total_min else Decimal('0')
+            lucro_por_hora = (lucro / horas_dec) if horas_dec else None
 
-        total_fat = sum(m['_faturado'] for m in relatorios_meses)
-        total_cus = sum(m['_custos'] for m in relatorios_meses)
-        total_luc = sum(m['_lucro'] for m in relatorios_meses)
-        total_at = sum(m['_atendimentos'] for m in relatorios_meses)
+            if total_atend == 0 and faturado == 0 and custos_total == 0:
+                continue
+
+            relatorios_meses.append({
+                'ano': ano_selecionado,
+                'mes': mes,
+                'label_curto': f'{MESES_PT[mes]}/{str(ano_selecionado)[2:]}',
+                'total_atendimentos': total_atend,
+                'total_faturado': _fmt_money_br(faturado),
+                'total_custos': _fmt_money_br(custos_total),
+                'lucro_total': _fmt_money_br(lucro),
+                'lucro_positivo': lucro >= 0,
+                'lucro_por_hora': _fmt_money_br(lucro_por_hora) if lucro_por_hora else None,
+            })
+
+        tot_fat = (
+            Pagamento.objects
+            .filter(
+                atendimento__estabelecimento=estabelecimento,
+                atendimento__data__year=ano_selecionado,
+            )
+            .aggregate(s=Sum('valor'))['s']
+        ) or Decimal('0')
+        tot_cus = (
+            Custo.objects
+            .filter(estabelecimento=estabelecimento, data__year=ano_selecionado)
+            .aggregate(s=Sum('valor'))['s']
+        ) or Decimal('0')
+        tot_lucro = tot_fat - tot_cus
+        tot_at = sum(m['total_atendimentos'] for m in relatorios_meses)
         totais = {
-            'faturado': _fmt_money_br(total_fat),
-            'custos': _fmt_money_br(total_cus),
-            'lucro': _fmt_money_br(total_luc),
-            'lucro_positivo': total_luc >= 0,
-            'atendimentos': total_at,
+            'atendimentos': tot_at,
+            'faturado': _fmt_money_br(tot_fat),
+            'custos': _fmt_money_br(tot_cus),
+            'lucro': _fmt_money_br(tot_lucro),
+            'lucro_positivo': tot_lucro >= 0,
         }
 
-    return render(request, 'core/consultor_relatorios.html', {
-        'estabelecimento_ativo': estabelecimento_ativo,
-        'estabelecimento_ativo_id': estabelecimento_ativo.pk if estabelecimento_ativo else None,
-        'estabelecimentos_disponiveis': disponiveis,
-        'relatorios_meses': relatorios_meses,
+    ctx.update({
         'anos_disponiveis': anos_disponiveis,
         'ano_selecionado': ano_selecionado,
+        'relatorios_meses': relatorios_meses,
         'totais': totais,
     })
-
-
-@_consultor_required
-def consultor_trocar_estabelecimento(request):
-    """POST: troca o estabelecimento ativo na sessão do consultor."""
-    if request.method != 'POST':
-        return redirect('consultor_painel')
-
-    disponiveis = _get_estabelecimentos_consultor(request.user)
-    ids_validos = {str(e.pk) for e in disponiveis}
-    est_id = request.POST.get('estabelecimento_id', '').strip()
-
-    if est_id in ids_validos:
-        request.session['consultor_est_id'] = est_id
-    else:
-        messages.error(request, 'Estabelecimento inválido.')
-
-    # Volta para a página de onde veio (painel ou relatórios)
-    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'consultor_painel'
-    try:
-        return redirect(next_url)
-    except Exception:
-        return redirect('consultor_painel')
+    return render(request, 'core/consultor_relatorios.html', ctx)
 
 
 @_consultor_required
 def consultor_exportar_csv(request):
-    """
-    GET: exporta os dados do estabelecimento em CSV.
-    Parâmetros opcionais: ano, mes (filtram o período).
-    """
+    """Exporta CSV do resumo financeiro mensal."""
     import csv
     from django.http import HttpResponse
     from datetime import date as date_cls
     from django.db.models import Sum, Count
 
-    estabelecimento_ativo, _ = _resolve_estabelecimento_consultor(request)
+    ctx = _get_consultor_context_base(request)
+    estabelecimento = ctx['estabelecimento_ativo']
 
-    # Permite sobrescrever o estabelecimento via querystring (apenas para IDs autorizados)
-    est_id_qs = request.GET.get('estabelecimento_id', '').strip()
-    if est_id_qs:
-        disponiveis = _get_estabelecimentos_consultor(request.user)
-        ids_validos = {str(e.pk): e for e in disponiveis}
-        if est_id_qs in ids_validos:
-            estabelecimento_ativo = ids_validos[est_id_qs]
+    if not estabelecimento:
+        return redirect('consultor_relatorios')
 
-    if not estabelecimento_ativo:
-        messages.error(request, 'Nenhum estabelecimento selecionado.')
-        return redirect('consultor_painel')
-
-    # Filtros de período
+    hoje = date_cls.today()
     try:
-        ano = int(request.GET['ano']) if 'ano' in request.GET else None
+        ano = int(request.GET.get('ano', 0)) or None
+        mes = int(request.GET.get('mes', 0)) or None
     except (ValueError, TypeError):
-        ano = None
-    try:
-        mes = int(request.GET['mes']) if 'mes' in request.GET else None
-    except (ValueError, TypeError):
-        mes = None
+        ano = mes = None
 
-    # Monta queryset de atendimentos
-    qs_at = Atendimento.objects.filter(
-        estabelecimento=estabelecimento_ativo
-    ).select_related('cliente').prefetch_related('pagamentos').order_by('data')
-    if ano:
-        qs_at = qs_at.filter(data__year=ano)
-    if mes:
-        qs_at = qs_at.filter(data__month=mes)
+    MESES_PT = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+                'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
-    # Monta queryset de custos
-    qs_cu = Custo.objects.filter(
-        estabelecimento=estabelecimento_ativo
-    ).select_related('categoria').order_by('data')
-    if ano:
-        qs_cu = qs_cu.filter(data__year=ano)
-    if mes:
-        qs_cu = qs_cu.filter(data__month=mes)
-
-    # Nome do arquivo
-    periodo = ''
-    if ano and mes:
-        periodo = f'_{ano}_{mes:02d}'
-    elif ano:
-        periodo = f'_{ano}'
-
-    slug_est = estabelecimento_ativo.nome.lower().replace(' ', '_')[:30]
-    filename = f'relatorio_{slug_est}{periodo}.csv'
-
-    response = HttpResponse(content_type='text/csv; charset=utf-8')
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    response.write('﻿')  # BOM para Excel reconhecer UTF-8
+    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    nome_base = estabelecimento.nome.lower().replace(' ', '_')
+    sufixo = f'_{ano}_{mes:02d}' if (ano and mes) else (f'_{ano}' if ano else '')
+    response['Content-Disposition'] = f'attachment; filename="relatorio_{nome_base}{sufixo}.csv"'
 
     writer = csv.writer(response, delimiter=';')
+    writer.writerow(['Mês', 'Atendimentos', 'Faturado (R$)', 'Custos (R$)', 'Lucro (R$)'])
 
-    # Seção: Atendimentos
-    writer.writerow(['## ATENDIMENTOS'])
-    writer.writerow(['Data', 'Cliente', 'Duração (min)', 'Valor Pago (R$)', 'Forma de Pagamento'])
-    for at in qs_at:
-        total_pago = sum(p.valor for p in at.pagamentos.all())
-        formas = ', '.join(
-            p.forma_pagamento.nome for p in at.pagamentos.all() if p.forma_pagamento
-        )
-        writer.writerow([
-            at.data.strftime('%d/%m/%Y'),
-            at.cliente.apelido if at.cliente else '—',
-            at.duracao or 0,
-            str(total_pago).replace('.', ','),
-            formas or '—',
-        ])
+    qs_at = Atendimento.objects.filter(estabelecimento=estabelecimento)
+    qs_pag = Pagamento.objects.filter(atendimento__estabelecimento=estabelecimento)
+    qs_cus = Custo.objects.filter(estabelecimento=estabelecimento)
+    if ano:
+        qs_at = qs_at.filter(data__year=ano)
+        qs_pag = qs_pag.filter(atendimento__data__year=ano)
+        qs_cus = qs_cus.filter(data__year=ano)
+    if mes:
+        qs_at = qs_at.filter(data__month=mes)
+        qs_pag = qs_pag.filter(atendimento__data__month=mes)
+        qs_cus = qs_cus.filter(data__month=mes)
 
-    writer.writerow([])  # linha em branco entre seções
+    chaves = set()
+    for d in qs_at.dates('data', 'month'):
+        chaves.add((d.year, d.month))
+    for d in qs_cus.dates('data', 'month'):
+        chaves.add((d.year, d.month))
 
-    # Seção: Custos
-    writer.writerow(['## CUSTOS'])
-    writer.writerow(['Data', 'Categoria', 'Descrição', 'Valor (R$)'])
-    for cu in qs_cu:
-        writer.writerow([
-            cu.data.strftime('%d/%m/%Y'),
-            cu.categoria.nome if cu.categoria else '—',
-            cu.descricao or '—',
-            str(cu.valor).replace('.', ','),
-        ])
+    for a, m in sorted(chaves):
+        qtd = qs_at.filter(data__year=a, data__month=m).aggregate(c=Count('id'))['c'] or 0
+        fat = qs_pag.filter(atendimento__data__year=a, atendimento__data__month=m).aggregate(s=Sum('valor'))['s'] or Decimal('0')
+        cus = qs_cus.filter(data__year=a, data__month=m).aggregate(s=Sum('valor'))['s'] or Decimal('0')
+        lucro = fat - cus
+        label = f'{MESES_PT[m]}/{str(a)[2:]}'
+        writer.writerow([label, qtd,
+                         str(fat).replace('.', ','),
+                         str(cus).replace('.', ','),
+                         str(lucro).replace('.', ',')])
 
     return response
 
 
-# ── Proteção da área de administrador ────────────────────────────────────────
-# Aplica login + verificação de papel (apenas admin) a todas as views do
-# painel administrativo de forma centralizada — um único ponto de auditoria.
-# Uma view nova de admin só fica protegida ao ser adicionada nesta lista.
-_ADMIN_VIEWS = (
-    'admin_painel',
-    'estabelecimentos', 'estabelecimento_criar',
-    'estabelecimento_editar', 'estabelecimento_excluir',
-    'categorias_custo', 'categoria_custo_criar',
-    'categoria_custo_editar', 'categoria_custo_excluir',
-    'caracteristicas_atendimento', 'caracteristica_atendimento_criar',
-    'caracteristica_atendimento_editar', 'caracteristica_atendimento_excluir',
-    'caracteristica_atendimento_opcoes', 'opcao_caracteristica_criar',
-    'opcao_caracteristica_editar', 'opcao_caracteristica_excluir',
-    'usuarios', 'usuario_criar', 'usuario_editar', 'usuario_excluir',
-    'acessos_estabelecimento', 'acesso_criar', 'acesso_editar', 'acesso_excluir',
-    'formas_pagamento', 'forma_pagamento_criar',
-    'forma_pagamento_editar', 'forma_pagamento_excluir',
-)
+@_consultor_required
+def consultor_relatorio_atendimentos(request):
+    """Relatório detalhado de atendimentos com filtro por período (mês inicial/final)."""
+    import calendar
+    from datetime import date as date_cls
+    from django.db.models import Sum, Prefetch
 
-for _view_name in _ADMIN_VIEWS:
-    globals()[_view_name] = admin_required(globals()[_view_name])
+    ctx = _get_consultor_context_base(request)
+    estabelecimento = ctx['estabelecimento_ativo']
+
+    hoje = date_cls.today()
+    MESES_PT_FULL = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+                     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+
+    try:
+        ano_ini = int(request.GET.get('ano_ini', hoje.year))
+        mes_ini = int(request.GET.get('mes_ini', 1))
+        ano_fim = int(request.GET.get('ano_fim', hoje.year))
+        mes_fim = int(request.GET.get('mes_fim', hoje.month))
+        # Clamp meses 1–12
+        mes_ini = max(1, min(12, mes_ini))
+        mes_fim = max(1, min(12, mes_fim))
+    except (ValueError, TypeError):
+        ano_ini, mes_ini = hoje.year, 1
+        ano_fim, mes_fim = hoje.year, hoje.month
+
+    data_ini = date_cls(ano_ini, mes_ini, 1)
+    ultimo_dia = calendar.monthrange(ano_fim, mes_fim)[1]
+    data_fim = date_cls(ano_fim, mes_fim, ultimo_dia)
+
+    if data_ini > data_fim:
+        data_ini, data_fim = data_fim, date_cls(data_ini.year, data_ini.month,
+                                                 calendar.monthrange(data_ini.year, data_ini.month)[1])
+        ano_ini, mes_ini = data_ini.year, data_ini.month
+        ano_fim, mes_fim = data_fim.year, data_fim.month
+
+    atendimentos = []
+    total_atendimentos = 0
+    total_faturado_raw = Decimal('0')
+    anos_disponiveis = []
+
+    if estabelecimento:
+        anos_set = set()
+        for d in Atendimento.objects.filter(estabelecimento=estabelecimento).dates('data', 'year'):
+            anos_set.add(d.year)
+        anos_set.add(hoje.year)
+        anos_disponiveis = sorted(anos_set)
+
+        qs = (
+            Atendimento.objects
+            .filter(estabelecimento=estabelecimento, data__gte=data_ini, data__lte=data_fim)
+            .select_related('cliente')
+            .prefetch_related(
+                Prefetch('pagamentos', queryset=Pagamento.objects.select_related('forma_pagamento'))
+            )
+            .order_by('data', 'hora')
+        )
+
+        total_atendimentos = qs.count()
+        total_faturado_raw = (
+            Pagamento.objects
+            .filter(
+                atendimento__estabelecimento=estabelecimento,
+                atendimento__data__gte=data_ini,
+                atendimento__data__lte=data_fim,
+            )
+            .aggregate(s=Sum('valor'))['s']
+        ) or Decimal('0')
+
+        for at in qs:
+            pags = list(at.pagamentos.all())
+            valor_total = sum(p.valor for p in pags) if pags else Decimal('0')
+            formas = ', '.join(
+                p.forma_pagamento.nome if p.forma_pagamento else 'N/A' for p in pags
+            ) if pags else '—'
+            atendimentos.append({
+                'data': at.data,
+                'hora': at.hora,
+                'cliente': at.cliente.apelido or '(sem apelido)',
+                'duracao': _fmt_horas_br(at.duracao) if at.duracao else '—',
+                'valor': _fmt_money_br(valor_total) if pags else '—',
+                'formas_pagamento': formas,
+            })
+
+    ctx.update({
+        'atendimentos': atendimentos,
+        'total_atendimentos': total_atendimentos,
+        'total_faturado': _fmt_money_br(total_faturado_raw),
+        'anos_disponiveis': anos_disponiveis,
+        'meses': [(i, MESES_PT_FULL[i]) for i in range(1, 13)],
+        'ano_ini': ano_ini,
+        'mes_ini': mes_ini,
+        'ano_fim': ano_fim,
+        'mes_fim': mes_fim,
+        'data_ini': data_ini,
+        'data_fim': data_fim,
+    })
+    return render(request, 'core/consultor_relatorio_atendimentos.html', ctx)
+
+
+@_consultor_required
+def consultor_exportar_csv_atendimentos(request):
+    """Exporta CSV detalhado dos atendimentos no período selecionado."""
+    import csv
+    import calendar
+    from django.http import HttpResponse
+    from datetime import date as date_cls
+    from django.db.models import Prefetch
+
+    ctx = _get_consultor_context_base(request)
+    estabelecimento = ctx['estabelecimento_ativo']
+
+    if not estabelecimento:
+        return redirect('consultor_relatorio_atendimentos')
+
+    hoje = date_cls.today()
+    try:
+        ano_ini = int(request.GET.get('ano_ini', hoje.year))
+        mes_ini = max(1, min(12, int(request.GET.get('mes_ini', 1))))
+        ano_fim = int(request.GET.get('ano_fim', hoje.year))
+        mes_fim = max(1, min(12, int(request.GET.get('mes_fim', hoje.month))))
+    except (ValueError, TypeError):
+        ano_ini, mes_ini = hoje.year, 1
+        ano_fim, mes_fim = hoje.year, hoje.month
+
+    data_ini = date_cls(ano_ini, mes_ini, 1)
+    ultimo_dia = calendar.monthrange(ano_fim, mes_fim)[1]
+    data_fim = date_cls(ano_fim, mes_fim, ultimo_dia)
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+    nome_base = estabelecimento.nome.lower().replace(' ', '_')
+    response['Content-Disposition'] = (
+        f'attachment; filename="atendimentos_{nome_base}'
+        f'_{ano_ini}{mes_ini:02d}_{ano_fim}{mes_fim:02d}.csv"'
+    )
+
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow(['Data', 'Hora', 'Cliente', 'Duração (min)', 'Valor (R$)', 'Forma de Pagamento'])
+
+    qs = (
+        Atendimento.objects
+        .filter(estabelecimento=estabelecimento, data__gte=data_ini, data__lte=data_fim)
+        .select_related('cliente')
+        .prefetch_related(
+            Prefetch('pagamentos', queryset=Pagamento.objects.select_related('forma_pagamento'))
+        )
+        .order_by('data', 'hora')
+    )
+
+    for at in qs:
+        pags = list(at.pagamentos.all())
+        valor_total = sum(p.valor for p in pags) if pags else Decimal('0')
+        formas = ', '.join(
+            p.forma_pagamento.nome if p.forma_pagamento else 'N/A' for p in pags
+        ) if pags else ''
+        writer.writerow([
+            at.data.strftime('%d/%m/%Y'),
+            at.hora.strftime('%H:%M'),
+            at.cliente.apelido or '',
+            at.duracao or '',
+            str(valor_total).replace('.', ',') if pags else '',
+            formas,
+        ])
+
+    return response

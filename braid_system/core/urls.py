@@ -68,7 +68,9 @@ urlpatterns = [
 
     # Painel do Consultor
     path('consultor/', views.consultor_painel, name='consultor_painel'),
-    path('consultor/relatorios/', views.consultor_relatorios, name='consultor_relatorios'),
     path('consultor/trocar-estabelecimento/', views.consultor_trocar_estabelecimento, name='consultor_trocar_estabelecimento'),
+    path('consultor/relatorios/', views.consultor_relatorios, name='consultor_relatorios'),
     path('consultor/exportar-csv/', views.consultor_exportar_csv, name='consultor_exportar_csv'),
+    path('consultor/relatorios/atendimentos/', views.consultor_relatorio_atendimentos, name='consultor_relatorio_atendimentos'),
+    path('consultor/relatorios/atendimentos/csv/', views.consultor_exportar_csv_atendimentos, name='consultor_exportar_csv_atendimentos'),
 ]
