@@ -383,7 +383,7 @@
                 </div>
                 <div class="form-group">
                   <label>Total recebido (R$)</label>
-                  <input type="number" name="pagamento_valor" value="{{ editando.total_pago }}" step="0.01" min="0">
+                  <input type="text" id="editPagInput" name="pagamento_valor" value="{{ editando.total_pago }}" inputmode="numeric">
                 </div>
               </div>
               <div class="form-actions">
@@ -467,6 +467,66 @@
   </div>
 
   <script>
+    // ───────────── Máscara de moeda estilo banco ─────────────
+    // Dígitos entram pela direita; os centavos se deslocam automaticamente.
+    function initCurrency(el, onChange) {
+      el.type = 'text';
+      el.setAttribute('inputmode', 'numeric');
+      el.setAttribute('autocomplete', 'off');
+      let cents = 0;
+
+      function fmt(c) {
+        const s = String(c).padStart(3, '0');
+        const intPart = s.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return (intPart || '0') + ',' + s.slice(-2);
+      }
+
+      function fromStr(str) {
+        str = (str || '').trim();
+        if (!str) return 0;
+        if (str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
+        const parts = str.split('.');
+        const i = Math.abs(parseInt(parts[0], 10)) || 0;
+        const d = parseInt(((parts[1] || '') + '00').slice(0, 2), 10);
+        return i * 100 + d;
+      }
+
+      function sync() {
+        el.value = cents > 0 ? fmt(cents) : '';
+        if (onChange) onChange(cents > 0 ? (cents / 100).toFixed(2) : '');
+      }
+
+      cents = fromStr(el.value);
+      el.value = cents > 0 ? fmt(cents) : '';
+
+      el.addEventListener('keydown', function(e) {
+        if (e.key >= '0' && e.key <= '9') {
+          e.preventDefault();
+          const next = cents * 10 + parseInt(e.key, 10);
+          if (next <= 999999999) cents = next;
+          sync();
+        } else if (e.key === 'Backspace' || e.key === 'Delete') {
+          e.preventDefault();
+          cents = Math.floor(cents / 10);
+          sync();
+        } else if (!['Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter'].includes(e.key)) {
+          e.preventDefault();
+        }
+      });
+
+      el.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const txt = (e.clipboardData || window.clipboardData).getData('text');
+        cents = fromStr(txt);
+        sync();
+      });
+
+      return {
+        get decimalValue() { return cents > 0 ? (cents / 100).toFixed(2) : ''; },
+        reset() { cents = 0; el.value = ''; if (onChange) onChange(''); }
+      };
+    }
+
     // ───────────── Carrossel de meses ─────────────
     (function() {
       const track   = document.getElementById('monthTrack');
@@ -653,7 +713,7 @@
       return '<div class="wiz-question">Pagamento</div>'
            + '<div class="wiz-hint">Total recebido pelo serviço.</div>'
            + '<label class="wizard-label">Valor recebido (R$) *</label>'
-           + '<input type="number" inputmode="decimal" class="wizard-input big" id="wPag" value="'+esc(S.pagamento)+'" step="0.01" min="0" placeholder="0,00">'
+           + '<input type="text" inputmode="numeric" class="wizard-input big" id="wPag" value="'+esc(S.pagamento)+'" placeholder="0,00" autocomplete="off">'
            + formaHTML;
     }
 
@@ -704,7 +764,7 @@
            + '<div class="wiz-hint">Opcional — informe o valor para vincular este custo ao atendimento, ou pule.</div>'
            + '<div class="custo-head"><span class="ic">'+iconHTML(cat.ilustracao)+'</span><span class="nm">'+esc(cat.nome)+'</span></div>'
            + '<label class="wizard-label">Valor (R$)</label>'
-           + '<input type="number" inputmode="decimal" class="wizard-input big" id="wCusto" value="'+esc(v)+'" step="0.01" min="0" placeholder="0,00">';
+           + '<input type="text" inputmode="numeric" class="wizard-input big" id="wCusto" value="'+esc(v)+'" placeholder="0,00" autocomplete="off">';
     }
 
     // ───────────── Eventos por página ─────────────
@@ -767,7 +827,9 @@
       }
       else if (page.t === 'pagamento'){
         const el = document.getElementById('wPag');
-        el.oninput = e => { S.pagamento = e.target.value; atualizarNext(); };
+        const pagCtrl = initCurrency(el, function(v) { S.pagamento = v; atualizarNext(); });
+        S.pagamento = pagCtrl.decimalValue; // sincroniza ao voltar para esta etapa
+        atualizarNext();
         const fp = document.getElementById('wForma');
         if (fp) fp.onchange = e => { S.formaPagamentoId = e.target.value; };
         setTimeout(() => el.focus(), 80);
@@ -804,7 +866,8 @@
       else if (page.t === 'custo'){
         const el = document.getElementById('wCusto');
         const cat = custoCatById(page.catId);
-        el.oninput = e => { S.custo[cat.id] = e.target.value; };
+        const custoCtrl = initCurrency(el, function(v) { S.custo[cat.id] = v; });
+        S.custo[cat.id] = custoCtrl.decimalValue;
       }
     }
 
@@ -916,6 +979,16 @@
     }
 
     document.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ fecharWizard(); fecharModal(); } });
+
+    // ───────────── Máscara de valor — form de edição ─────────────
+    (function() {
+      const el = document.getElementById('editPagInput');
+      if (!el) return;
+      const ctrl = initCurrency(el);
+      el.closest('form').addEventListener('submit', function() {
+        el.value = ctrl.decimalValue;
+      });
+    })();
   </script>
 </body>
 </html>

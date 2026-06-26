@@ -483,7 +483,7 @@
                 </div>
                 <div class="form-group">
                   <label>Valor (R$) *</label>
-                  <input type="number" name="valor" value="{{ editando.valor }}" step="0.01" min="0.01" required>
+                  <input type="text" id="editValorInput" name="valor" value="{{ editando.valor }}" inputmode="numeric" required>
                 </div>
               </div>
               <div class="form-actions">
@@ -593,7 +593,7 @@
         <div class="wizard-panel" id="wpanel3">
           <p class="step-hint">Passo 3 de 3 — Valor e observação</p>
           <label class="wizard-label" for="wValor">Valor (R$) *</label>
-          <input class="wizard-input big" type="number" id="wValor" name="valor" step="0.01" min="0.01" placeholder="0,00" required>
+          <input class="wizard-input big" type="text" id="wValor" name="valor" inputmode="numeric" placeholder="0,00" required>
           <label class="wizard-label" for="wDescricao">Descrição</label>
           <input class="wizard-input" type="text" id="wDescricao" name="descricao" maxlength="255" placeholder="Opcional">
           <div class="wizard-footer">
@@ -621,6 +621,66 @@
   </div>
 
   <script>
+    // --- Máscara de moeda estilo banco ---
+    // Dígitos entram pela direita; os centavos se deslocam automaticamente.
+    function initCurrency(el, onChange) {
+      el.type = 'text';
+      el.setAttribute('inputmode', 'numeric');
+      el.setAttribute('autocomplete', 'off');
+      let cents = 0;
+
+      function fmt(c) {
+        const s = String(c).padStart(3, '0');
+        const intPart = s.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return (intPart || '0') + ',' + s.slice(-2);
+      }
+
+      function fromStr(str) {
+        str = (str || '').trim();
+        if (!str) return 0;
+        if (str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
+        const parts = str.split('.');
+        const i = Math.abs(parseInt(parts[0], 10)) || 0;
+        const d = parseInt(((parts[1] || '') + '00').slice(0, 2), 10);
+        return i * 100 + d;
+      }
+
+      function sync() {
+        el.value = cents > 0 ? fmt(cents) : '';
+        if (onChange) onChange(cents > 0 ? (cents / 100).toFixed(2) : '');
+      }
+
+      cents = fromStr(el.value);
+      el.value = cents > 0 ? fmt(cents) : '';
+
+      el.addEventListener('keydown', function(e) {
+        if (e.key >= '0' && e.key <= '9') {
+          e.preventDefault();
+          const next = cents * 10 + parseInt(e.key, 10);
+          if (next <= 999999999) cents = next;
+          sync();
+        } else if (e.key === 'Backspace' || e.key === 'Delete') {
+          e.preventDefault();
+          cents = Math.floor(cents / 10);
+          sync();
+        } else if (!['Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter'].includes(e.key)) {
+          e.preventDefault();
+        }
+      });
+
+      el.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const txt = (e.clipboardData || window.clipboardData).getData('text');
+        cents = fromStr(txt);
+        sync();
+      });
+
+      return {
+        get decimalValue() { return cents > 0 ? (cents / 100).toFixed(2) : ''; },
+        reset() { cents = 0; el.value = ''; if (onChange) onChange(''); }
+      };
+    }
+
     // --- Carrossel horizontal ---
     const track   = document.getElementById('monthTrack');
     const wrap    = document.getElementById('trackWrap');
@@ -757,6 +817,7 @@
       catStack = [];
       renderCatNivel(catRaizes, '');
       setWizardStep(1);
+      if (wValorCtrl) wValorCtrl.reset();
       wizardOverlay.classList.add('open');
     }
 
@@ -807,6 +868,27 @@
     document.getElementById('modalExcluir').addEventListener('click', function(e) {
       if (e.target === this) fecharModal();
     });
+
+    // --- Máscara de valor — wizard novo custo ---
+    let wValorCtrl = null;
+    (function() {
+      const el = document.getElementById('wValor');
+      if (!el) return;
+      wValorCtrl = initCurrency(el);
+      document.getElementById('wizardForm').addEventListener('submit', function() {
+        el.value = wValorCtrl.decimalValue;
+      });
+    })();
+
+    // --- Máscara de valor — form de edição ---
+    (function() {
+      const el = document.getElementById('editValorInput');
+      if (!el) return;
+      const ctrl = initCurrency(el);
+      el.closest('form').addEventListener('submit', function() {
+        el.value = ctrl.decimalValue;
+      });
+    })();
   </script>
 </body>
 </html>
