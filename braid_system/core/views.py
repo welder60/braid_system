@@ -102,10 +102,12 @@ def perfil(request):
     })
 
 
+@admin_required
 def admin_painel(request):
     return render(request, 'core/admin_painel.html')
 
 
+@admin_required
 def cadastro_estabelecimento(request):
     if request.method == 'POST':
         nome = request.POST.get('nome', '').strip()
@@ -128,10 +130,12 @@ def _ctx_estabelecimentos(editando=None):
     }
 
 
+@admin_required
 def estabelecimentos(request):
     return render(request, 'core/estabelecimentos.html', _ctx_estabelecimentos())
 
 
+@admin_required
 def estabelecimento_criar(request):
     if request.method == 'POST':
         nome = request.POST.get('nome', '').strip()
@@ -144,6 +148,7 @@ def estabelecimento_criar(request):
     return render(request, 'core/estabelecimentos.html', _ctx_estabelecimentos())
 
 
+@admin_required
 def estabelecimento_editar(request, pk):
     est = get_object_or_404(Estabelecimento, pk=pk)
     if request.method == 'POST':
@@ -158,6 +163,7 @@ def estabelecimento_editar(request, pk):
     return render(request, 'core/estabelecimentos.html', _ctx_estabelecimentos(editando=est))
 
 
+@admin_required
 def estabelecimento_excluir(request, pk):
     est = get_object_or_404(Estabelecimento, pk=pk)
     if request.method == 'POST':
@@ -181,6 +187,7 @@ def _ctx_categorias(editando=None):
     }
 
 
+@admin_required
 def categorias_custo(request):
     return render(request, 'core/categorias_custo.html', _ctx_categorias())
 
@@ -206,6 +213,7 @@ def _salvar_ilustracao(request, atual='', pasta='categorias_custo'):
     return atual
 
 
+@admin_required
 def categoria_custo_criar(request):
     if request.method == 'POST':
         nome = request.POST.get('nome', '').strip()
@@ -228,6 +236,7 @@ def categoria_custo_criar(request):
     return render(request, 'core/categorias_custo.html', _ctx_categorias())
 
 
+@admin_required
 def categoria_custo_editar(request, pk):
     categoria = get_object_or_404(CategoriaCusto, pk=pk)
 
@@ -256,6 +265,7 @@ def categoria_custo_editar(request, pk):
     return render(request, 'core/categorias_custo.html', _ctx_categorias(editando=categoria))
 
 
+@admin_required
 def categoria_custo_excluir(request, pk):
     categoria = get_object_or_404(CategoriaCusto, pk=pk)
     if request.method == 'POST':
@@ -275,10 +285,12 @@ def _ctx_caracteristicas(editando=None):
     }
 
 
+@admin_required
 def caracteristicas_atendimento(request):
     return render(request, 'core/caracteristicas_atendimento.html', _ctx_caracteristicas())
 
 
+@admin_required
 def caracteristica_atendimento_criar(request):
     if request.method == 'POST':
         nome = request.POST.get('nome', '').strip()
@@ -303,6 +315,7 @@ def caracteristica_atendimento_criar(request):
     return render(request, 'core/caracteristicas_atendimento.html', _ctx_caracteristicas())
 
 
+@admin_required
 def caracteristica_atendimento_editar(request, pk):
     caracteristica = get_object_or_404(CaracteristicaAtendimento, pk=pk)
 
@@ -328,6 +341,7 @@ def caracteristica_atendimento_editar(request, pk):
     return render(request, 'core/caracteristicas_atendimento.html', _ctx_caracteristicas(editando=caracteristica))
 
 
+@admin_required
 def caracteristica_atendimento_excluir(request, pk):
     caracteristica = get_object_or_404(CaracteristicaAtendimento, pk=pk)
     if request.method == 'POST':
@@ -353,11 +367,13 @@ def _ctx_opcoes(caracteristica, editando=None, pre_selecionado=None):
     }
 
 
+@admin_required
 def caracteristica_atendimento_opcoes(request, pk):
     caracteristica = get_object_or_404(CaracteristicaAtendimento, pk=pk)
     return render(request, 'core/opcoes_caracteristica_atendimento.html', _ctx_opcoes(caracteristica))
 
 
+@admin_required
 def opcao_caracteristica_criar(request, pk):
     caracteristica = get_object_or_404(CaracteristicaAtendimento, pk=pk)
 
@@ -388,6 +404,7 @@ def opcao_caracteristica_criar(request, pk):
     return render(request, 'core/opcoes_caracteristica_atendimento.html', _ctx_opcoes(caracteristica))
 
 
+@admin_required
 def opcao_caracteristica_editar(request, pk, opcao_pk):
     caracteristica = get_object_or_404(CaracteristicaAtendimento, pk=pk)
     opcao = get_object_or_404(CaracteristicaAtendimentoOpcao, pk=opcao_pk, caracteristica_atendimento=caracteristica)
@@ -418,6 +435,7 @@ def opcao_caracteristica_editar(request, pk, opcao_pk):
                   _ctx_opcoes(caracteristica, editando=opcao))
 
 
+@admin_required
 def opcao_caracteristica_excluir(request, pk, opcao_pk):
     caracteristica = get_object_or_404(CaracteristicaAtendimento, pk=pk)
     opcao = get_object_or_404(CaracteristicaAtendimentoOpcao, pk=opcao_pk, caracteristica_atendimento=caracteristica)
@@ -438,10 +456,12 @@ def _ctx_usuarios(editando=None):
     }
 
 
+@admin_required
 def usuarios(request):
     return render(request, 'core/usuarios.html', _ctx_usuarios())
 
 
+@admin_required
 def usuario_criar(request):
     if request.method == 'POST':
         nome = request.POST.get('nome', '').strip()
@@ -461,6 +481,7 @@ def usuario_criar(request):
     return render(request, 'core/usuarios.html', _ctx_usuarios())
 
 
+@admin_required
 def usuario_editar(request, pk):
     usuario = get_object_or_404(Usuario, pk=pk)
 
@@ -482,6 +503,7 @@ def usuario_editar(request, pk):
     return render(request, 'core/usuarios.html', _ctx_usuarios(editando=usuario))
 
 
+@admin_required
 def usuario_excluir(request, pk):
     usuario = get_object_or_404(Usuario, pk=pk)
     if request.method == 'POST':
@@ -517,10 +539,12 @@ def _ctx_acessos(request, editando=None):
     }
 
 
+@admin_required
 def acessos_estabelecimento(request):
     return render(request, 'core/acessos_estabelecimento.html', _ctx_acessos(request))
 
 
+@admin_required
 def acesso_criar(request):
     if request.method == 'POST':
         usuario_id = request.POST.get('usuario', '').strip()
@@ -551,6 +575,7 @@ def acesso_criar(request):
     return render(request, 'core/acessos_estabelecimento.html', _ctx_acessos(request))
 
 
+@admin_required
 def acesso_editar(request, pk):
     acesso = get_object_or_404(EstabelecimentoUsuario, pk=pk)
 
@@ -570,6 +595,7 @@ def acesso_editar(request, pk):
     return render(request, 'core/acessos_estabelecimento.html', _ctx_acessos(request, editando=acesso))
 
 
+@admin_required
 def acesso_excluir(request, pk):
     acesso = get_object_or_404(EstabelecimentoUsuario, pk=pk)
     if request.method == 'POST':
@@ -591,10 +617,12 @@ def _ctx_formas_pagamento(editando=None):
     }
 
 
+@admin_required
 def formas_pagamento(request):
     return render(request, 'core/formas_pagamento.html', _ctx_formas_pagamento())
 
 
+@admin_required
 def forma_pagamento_criar(request):
     if request.method == 'POST':
         nome = request.POST.get('nome', '').strip()
@@ -608,6 +636,7 @@ def forma_pagamento_criar(request):
     return render(request, 'core/formas_pagamento.html', _ctx_formas_pagamento())
 
 
+@admin_required
 def forma_pagamento_editar(request, pk):
     forma = get_object_or_404(FormaPagamento, pk=pk)
     if request.method == 'POST':
@@ -624,6 +653,7 @@ def forma_pagamento_editar(request, pk):
     return render(request, 'core/formas_pagamento.html', _ctx_formas_pagamento(editando=forma))
 
 
+@admin_required
 def forma_pagamento_excluir(request, pk):
     forma = get_object_or_404(FormaPagamento, pk=pk)
     if request.method == 'POST':
