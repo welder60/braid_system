@@ -1143,8 +1143,8 @@ def custo_criar(request):
         if not erros:
             try:
                 categoria = CategoriaCusto.objects.get(pk=categoria_id, vinculado_atendimento=False)
-                if categoria.nivel_superior_id is None:
-                    messages.error(request, 'Não é permitido vincular uma super categoria a um custo. Selecione uma subcategoria.')
+                if categoria.subcategorias.exists():
+                    messages.error(request, 'Não é permitido vincular uma categoria que possui subcategorias. Selecione uma categoria folha.')
                 else:
                     Custo.objects.create(
                         estabelecimento=estabelecimento,
