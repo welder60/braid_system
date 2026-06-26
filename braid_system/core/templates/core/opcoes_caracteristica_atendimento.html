@@ -58,6 +58,21 @@
   }
 
   .ilustracao-preview { font-size:1.3rem; min-width:28px; text-align:center; }
+  .ilustracao-preview img { height:32px; width:32px; object-fit:cover; border-radius:6px; border:1px solid #ddd; vertical-align:middle; }
+
+  /* ── Drop zone ── */
+  .drop-zone {
+    border:2px dashed #ddd; border-radius:10px; padding:1rem;
+    text-align:center; cursor:pointer; transition:border-color 0.2s, background 0.2s;
+    background:#fafafa; position:relative;
+  }
+  .drop-zone.dragover { border-color:var(--color-gold); background:#fffbf0; }
+  .drop-zone input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; }
+  .drop-zone .drop-label { font-size:0.82rem; color:#999; pointer-events:none; }
+  .drop-zone .drop-label strong { color:var(--color-forest); }
+  .drop-preview { margin-top:0.5rem; display:flex; align-items:center; gap:0.5rem; }
+  .drop-preview img { height:40px; width:40px; object-fit:cover; border-radius:6px; border:1px solid #ddd; }
+  .drop-preview span { font-size:0.78rem; color:#666; }
 
   .empty-state { text-align:center; color:#bbb; padding:2.5rem 1rem; }
   .empty-state .ph-icon { font-size:2.5rem; margin-bottom:0.75rem; }
@@ -113,20 +128,31 @@
 
         <div class="form-group flex">
           <label for="ilustracao_arquivo">Ilustração</label>
+
+          <div class="drop-zone" id="drop-zone">
+            <input type="file" id="ilustracao_arquivo" name="ilustracao_arquivo" accept="image/*">
+            <div class="drop-label">
+              <strong>Arraste uma imagem aqui</strong> ou clique para selecionar
+            </div>
+          </div>
+
+          <div class="drop-preview" id="drop-preview" style="display:none;">
+            <img id="drop-img" src="" alt="Pré-visualização">
+            <span id="drop-filename"></span>
+          </div>
+
           {% if editando.ilustracao %}
-            <div style="margin-bottom:0.5rem;display:flex;align-items:center;gap:0.5rem;">
+            <div style="margin-top:0.4rem;display:flex;align-items:center;gap:0.5rem;">
               {% if editando.ilustracao|slice:":4" == "http" or editando.ilustracao|slice:":1" == "/" %}
                 <img src="{{ editando.ilustracao }}" alt="Ilustração atual" style="height:36px;width:36px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">
               {% else %}
                 <span style="font-size:1.6rem;">{{ editando.ilustracao }}</span>
               {% endif %}
-              <span style="font-size:0.75rem;color:#999;">atual</span>
+              <span style="font-size:0.75rem;color:#999;">imagem atual</span>
             </div>
           {% endif %}
-          <input type="file" id="ilustracao_arquivo" name="ilustracao_arquivo"
-                 accept="image/*"
-                 style="padding:0.45rem 0.6rem;border:1.5px solid #ddd;border-radius:8px;font-size:0.85rem;font-family:inherit;background:#fff;cursor:pointer;">
-          <span class="hint" style="margin-top:0.3rem;">Selecione uma imagem do computador — ou use o campo abaixo para emoji / URL.</span>
+
+          <span class="hint" style="margin-top:0.3rem;">Ou use o campo abaixo para emoji / URL.</span>
           <input type="text" id="ilustracao" name="ilustracao" maxlength="500"
                  value="{{ editando.ilustracao|default:'' }}"
                  placeholder="Ex: 🌀 ou https://..."
@@ -184,7 +210,15 @@
         <tbody>
           {% for op in opcoes_raiz %}
           <tr>
-            <td class="ilustracao-preview">{{ op.ilustracao|default:"—" }}</td>
+            <td class="ilustracao-preview">
+              {% if op.ilustracao %}
+                {% if op.ilustracao|slice:":4" == "http" or op.ilustracao|slice:":1" == "/" %}
+                  <img src="{{ op.ilustracao }}" alt="{{ op.nome }}">
+                {% else %}
+                  {{ op.ilustracao }}
+                {% endif %}
+              {% else %}—{% endif %}
+            </td>
             <td class="opcao-raiz">{{ op.nome }}</td>
             <td><span style="font-size:.75rem;color:#888;">Principal</span></td>
             <td style="text-align:center;color:#888;font-size:.85rem;">{{ op.subdivisoes.count }}</td>
@@ -199,7 +233,15 @@
           </tr>
           {% for sub in op.subdivisoes.all %}
           <tr>
-            <td class="ilustracao-preview" style="color:#aaa;">{{ sub.ilustracao|default:"—" }}</td>
+            <td class="ilustracao-preview" style="color:#aaa;">
+              {% if sub.ilustracao %}
+                {% if sub.ilustracao|slice:":4" == "http" or sub.ilustracao|slice:":1" == "/" %}
+                  <img src="{{ sub.ilustracao }}" alt="{{ sub.nome }}">
+                {% else %}
+                  {{ sub.ilustracao }}
+                {% endif %}
+              {% else %}—{% endif %}
+            </td>
             <td class="opcao-sub">{{ sub.nome }}</td>
             <td><span class="tag-sub">Sub-opção</span></td>
             <td style="text-align:center;color:#ccc;font-size:.85rem;">—</td>
@@ -265,5 +307,39 @@
     document.getElementById('nome').focus();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  // ── Drag-and-drop illustration ──
+  const dropZone   = document.getElementById('drop-zone');
+  const fileInput  = document.getElementById('ilustracao_arquivo');
+  const preview    = document.getElementById('drop-preview');
+  const previewImg = document.getElementById('drop-img');
+  const previewName= document.getElementById('drop-filename');
+
+  function showPreview(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    previewImg.src = URL.createObjectURL(file);
+    previewName.textContent = file.name;
+    preview.style.display = 'flex';
+  }
+
+  fileInput.addEventListener('change', () => showPreview(fileInput.files[0]));
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      // Assign to the file input via DataTransfer
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInput.files = dt.files;
+      showPreview(file);
+    }
+  });
 </script>
 {% endblock %}
