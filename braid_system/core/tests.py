@@ -461,6 +461,15 @@ class EstabelecimentoViewTests(AdminLogadoMixin, TestCase):
         self.assertRedirects(resp, reverse('estabelecimentos'))
         self.assertFalse(Estabelecimento.objects.filter(pk=est.pk).exists())
 
+    def test_excluir_protegido_redireciona_com_erro(self):
+        est = criar_estabelecimento('Com Atendimento')
+        criar_atendimento(est)
+        resp = self.client.post(reverse('estabelecimento_excluir', args=[est.pk]))
+        self.assertRedirects(resp, reverse('estabelecimentos'))
+        self.assertTrue(Estabelecimento.objects.filter(pk=est.pk).exists())
+        msgs = [str(m) for m in resp.wsgi_request._messages]
+        self.assertTrue(any('Não é possível excluir' in m for m in msgs))
+
     def test_editar_inexistente_404(self):
         import uuid
         resp = self.client.post(reverse('estabelecimento_editar', args=[uuid.uuid4()]), {'nome': 'x'})
@@ -718,6 +727,15 @@ class ClienteViewTests(AutenticadoComEstabelecimentoMixin, TestCase):
         resp = self.client.post(reverse('cliente_excluir', args=[c.pk]))
         self.assertRedirects(resp, reverse('clientes'))
         self.assertEqual(Cliente.objects.count(), 0)
+
+    def test_excluir_protegido_redireciona_com_erro(self):
+        c = Cliente.objects.create(estabelecimento=self.est, apelido='Com Atendimento')
+        criar_atendimento(self.est, cliente=c)
+        resp = self.client.post(reverse('cliente_excluir', args=[c.pk]))
+        self.assertRedirects(resp, reverse('clientes'))
+        self.assertTrue(Cliente.objects.filter(pk=c.pk).exists())
+        msgs = [str(m) for m in resp.wsgi_request._messages]
+        self.assertTrue(any('Não é possível excluir' in m for m in msgs))
 
     def test_anonimo_redireciona(self):
         self.client.logout()

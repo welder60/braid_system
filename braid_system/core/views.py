@@ -176,8 +176,14 @@ def estabelecimento_excluir(request, pk):
     est = get_object_or_404(Estabelecimento, pk=pk)
     if request.method == 'POST':
         nome = est.nome
-        est.delete()
-        messages.success(request, f'Estabelecimento "{nome}" excluído.')
+        try:
+            est.delete()
+            messages.success(request, f'Estabelecimento "{nome}" excluído.')
+        except ProtectedError:
+            messages.error(
+                request,
+                f'Não é possível excluir "{nome}": há atendimentos ou outros registros vinculados.',
+            )
     return redirect('estabelecimentos')
 
 
@@ -953,12 +959,10 @@ def atendimento_criar(request):
                 duracao=_duracao_para_minutos(duracao_val),
             )
 
-            # Forma de pagamento: a selecionada ou, na ausencia, a padrao
+            # Forma de pagamento: a selecionada, ou None quando nao informada
             forma_pagamento = None
             if forma_pagamento_id:
                 forma_pagamento = FormaPagamento.objects.filter(pk=forma_pagamento_id).first()
-            if forma_pagamento is None:
-                forma_pagamento = FormaPagamento.objects.filter(padrao=True).first()
 
             # Pagamento vinculado ao atendimento
             Pagamento.objects.create(
@@ -983,7 +987,7 @@ def atendimento_criar(request):
                     continue
                 cat_id = chave[len('custo_'):]
                 categoria = CategoriaCusto.objects.filter(
-                    pk=cat_id, vinculado_atendimento=True, nivel_superior__isnull=False,
+                    pk=cat_id, vinculado_atendimento=True,
                 ).first()
                 if not categoria:
                     continue
@@ -1056,7 +1060,7 @@ def atendimento_editar(request, pk):
                                 valor=pagamento_dec,
                             )
                 messages.success(request, 'Atendimento atualizado.')
-                return redirect(f'/atendimentos/?mes={mes}&ano={ano}')
+                return redirect('atendimentos')
             except Exception as exc:  # noqa: BLE001
                 messages.error(request, f'Erro ao atualizar: {exc}')
         else:
@@ -1076,7 +1080,7 @@ def atendimento_excluir(request, pk):
     if request.method == 'POST':
         atendimento.delete()
         messages.success(request, 'Atendimento removido.')
-    return redirect(f'/atendimentos/?mes={mes}&ano={ano}')
+    return redirect('atendimentos')
 
 
 def _get_estabelecimento_ativo(request):
@@ -1224,8 +1228,8 @@ def custo_editar(request, pk):
 
         try:
             categoria = CategoriaCusto.objects.get(pk=categoria_id, vinculado_atendimento=False)
-            if categoria.nivel_superior_id is None:
-                messages.error(request, 'Não é permitido vincular uma super categoria a um custo. Selecione uma subcategoria.')
+            if categoria.subcategorias.exists():
+                messages.error(request, 'Não é permitido vincular uma categoria que possui subcategorias. Selecione uma categoria folha.')
             else:
                 custo.categoria_custo = categoria
                 custo.descricao = descricao
@@ -1368,8 +1372,14 @@ def cliente_excluir(request, pk):
     )
     if request.method == 'POST':
         apelido = cliente.apelido
-        cliente.delete()
-        messages.success(request, f'Cliente "{apelido}" excluído.')
+        try:
+            cliente.delete()
+            messages.success(request, f'Cliente "{apelido}" excluído.')
+        except ProtectedError:
+            messages.error(
+                request,
+                f'Não é possível excluir "{apelido}": há atendimentos vinculados a este cliente.',
+            )
     return redirect('clientes')
 
 
