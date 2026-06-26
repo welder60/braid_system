@@ -53,7 +53,7 @@ Usuario = get_user_model()
 # Helpers de criacao reutilizados pelos testes
 # ---------------------------------------------------------------------------
 def criar_usuario(email='pro@exemplo.com', nome='Profissional',
-                  senha='senha-super-secreta-123', tipo='profissional', **extra):
+                  senha='testuser-abc-987654', tipo='profissional', **extra):
     return Usuario.objects.create_user(
         email=email, nome=nome, password=senha, tipo=tipo, **extra
     )
