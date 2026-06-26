@@ -44,6 +44,14 @@ def admin_required(view_func):
 
 
 def home(request):
+    if request.user.is_authenticated:
+        tipo = getattr(request.user, 'tipo', None)
+        if tipo == 'admin':
+            return redirect('admin_painel')
+        elif tipo == 'consultor':
+            return redirect('consultor_painel')
+        else:  # profissional, gerente ou qualquer outro tipo autenticado
+            return redirect('gestao')
     return render(request, 'core/home.html')
 
 
