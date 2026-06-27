@@ -1531,37 +1531,35 @@ def _consultor_required(view_func):
 
 
 
-SESSION_KEY_CONSULTOR_EST = 'consultor_estabelecimento_id'
+# A seleção de estabelecimento passa a ser feita UNICAMENTE pelo perfil do
+# usuário (view `perfil`), que grava em 'estabelecimento_ativo_id'. O painel
+# do consultor lê essa mesma seleção (via access.get_estabelecimento_ativo),
+# em vez de manter uma chave de sessão própria. Assim, trocar de
+# estabelecimento no perfil reflete imediatamente nos dashboards e relatórios.
+SESSION_KEY_EST_ATIVO = 'estabelecimento_ativo_id'
 
 
 def _get_consultor_context_base(request):
-    """Contexto compartilhado por todas as views do painel do consultor."""
+    """Contexto compartilhado por todas as views do painel do consultor.
+
+    O estabelecimento ativo vem da seleção única do sistema (perfil + context
+    processor), garantindo que escolher o estabelecimento no perfil reflita de
+    imediato nos dashboards e relatórios do consultor. A autorização é aplicada
+    em access.get_estabelecimento_ativo (admin vê todos; demais, só vinculados).
+    """
     estabelecimentos = _get_estabelecimentos_consultor(request.user)
-    est_id = request.session.get(SESSION_KEY_CONSULTOR_EST)
-    estabelecimento_ativo = None
-    if est_id:
-        for e in estabelecimentos:
-            if str(e.pk) == str(est_id):
-                estabelecimento_ativo = e
-                break
+    estabelecimento_ativo = get_estabelecimento_ativo(request, auto_select=True)
+    # Fallback: havendo um único estabelecimento disponível (inclui admin com um
+    # só cadastro), seleciona-o e persiste, preservando a experiência de não
+    # exigir seleção manual quando não há ambiguidade.
     if estabelecimento_ativo is None and len(estabelecimentos) == 1:
         estabelecimento_ativo = estabelecimentos[0]
-        request.session[SESSION_KEY_CONSULTOR_EST] = str(estabelecimento_ativo.pk)
+        request.session[SESSION_KEY_EST_ATIVO] = str(estabelecimento_ativo.pk)
     return {
         'estabelecimentos_disponiveis': estabelecimentos,
         'estabelecimento_ativo': estabelecimento_ativo,
         'estabelecimento_ativo_id': str(estabelecimento_ativo.pk) if estabelecimento_ativo else None,
     }
-
-
-@_consultor_required
-def consultor_trocar_estabelecimento(request):
-    if request.method == 'POST':
-        est_id = request.POST.get('estabelecimento_id', '')
-        if est_id:
-            request.session[SESSION_KEY_CONSULTOR_EST] = est_id
-    next_url = request.POST.get('next', '') or 'consultor_painel'
-    return redirect(next_url)
 
 
 @_consultor_required
