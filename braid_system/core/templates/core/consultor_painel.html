@@ -247,6 +247,48 @@
     font-size: 0.875rem;
   }
 
+
+  /* -- Grafico de evolucao mensal -- */
+  .chart-controls { display:flex; gap:.7rem; flex-wrap:wrap; align-items:flex-end; }
+  .chart-select { display:flex; flex-direction:column; gap:.25rem; }
+  .chart-select > span { font-size:.6rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#999; }
+  .chart-select select {
+    font-family:inherit; font-size:.8rem; font-weight:600; color:var(--color-forest);
+    background:#fff; border:1px solid #d8cdb5; border-radius:8px; padding:.42rem .6rem; cursor:pointer;
+    transition:border-color .15s, box-shadow .15s; min-width:155px;
+  }
+  .chart-select select:hover { border-color:var(--color-gold); }
+  .chart-select select:focus { outline:none; border-color:var(--color-gold); box-shadow:0 0 0 3px rgba(200,161,90,.18); }
+  .chart-card { padding:1.25rem 1.4rem 1.4rem; margin-bottom:2rem; }
+  .chart-meta { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:.4rem; margin-bottom:.8rem; }
+  .chart-current-label { font-size:.95rem; font-weight:700; color:var(--color-forest); text-transform:capitalize; }
+  .chart-total { font-size:.78rem; color:#999; font-weight:600; }
+  .chart-total strong { color:var(--color-earth); font-weight:800; }
+  .chart-wrap { position:relative; width:100%; }
+  #chartSvg { width:100%; height:auto; display:block; overflow:visible; }
+  .chart-grid-line { stroke:#ece4d3; stroke-width:1; }
+  .chart-zero-line { stroke:#c9bda0; stroke-width:1.2; }
+  .chart-axis-label { fill:#aaa; font-size:11px; font-family:inherit; }
+  .chart-month-label { fill:#888; font-size:11px; font-weight:600; font-family:inherit; text-anchor:middle; }
+  .chart-bar { transition:opacity .12s; cursor:pointer; }
+  .chart-bar.pos { fill:var(--color-gold); }
+  .chart-bar.neg { fill:var(--color-terracota); }
+  .chart-bar:hover { opacity:.82; }
+  .chart-bar-value { fill:var(--color-forest); font-size:10px; font-weight:700; font-family:inherit; text-anchor:middle; opacity:.72; }
+  .chart-empty-note { fill:#bbb; font-size:12px; font-family:inherit; text-anchor:middle; }
+  .chart-tooltip {
+    position:absolute; pointer-events:none; z-index:10; transform:translate(-50%, -118%);
+    background:var(--color-forest); color:var(--color-sand);
+    padding:.4rem .6rem; border-radius:8px; font-size:.72rem; line-height:1.4;
+    box-shadow:0 4px 14px rgba(0,0,0,.22); white-space:nowrap;
+  }
+  .chart-tooltip strong { display:block; font-size:.8rem; color:#fff; }
+  @media (max-width:560px){
+    .chart-controls { width:100%; }
+    .chart-select { flex:1; }
+    .chart-select select { width:100%; min-width:0; }
+  }
+
 {% endblock %}
 
 {% block content %}
@@ -293,6 +335,45 @@
         <span class="kpi-label">Custos (mês)</span>
         <span class="kpi-value"><span class="cur">R$</span>{{ kpi.custos_mes }}</span>
         <span class="kpi-desc">registrados</span>
+      </div>
+    </div>
+
+    <!-- Evolucao mensal -->
+    <div class="section-header">
+      <span class="section-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Evolucao Mensal
+      </span>
+      <div class="chart-controls">
+        <label class="chart-select">
+          <span>Indicador</span>
+          <select id="chartIndicador">
+            <option value="faturamento">Faturamento mensal</option>
+            <option value="custo">Custo mensal</option>
+            <option value="lucro">Lucro mensal</option>
+            <option value="atendimentos">N&ordm; de atendimentos</option>
+            <option value="lucro_por_atendimento">Lucro por atendimento</option>
+          </select>
+        </label>
+        <label class="chart-select">
+          <span>Ano</span>
+          <select id="chartAno">
+            {% for a in chart_anos %}
+              <option value="{{ a }}"{% if a == chart_ano_inicial %} selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="card chart-card">
+      <div class="chart-meta">
+        <span class="chart-current-label" id="chartCurrentLabel">Faturamento mensal</span>
+        <span class="chart-total" id="chartTotal"></span>
+      </div>
+      <div class="chart-wrap" id="chartWrap">
+        <svg id="chartSvg" viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Grafico de evolucao mensal por indicador"></svg>
+        <div class="chart-tooltip" id="chartTooltip" hidden></div>
       </div>
     </div>
 
@@ -484,13 +565,166 @@
   if (carNext) carNext.addEventListener('click', () => goTo(current + 1, true));
   if (arrowPrev) arrowPrev.addEventListener('click', () => goTo(current - 1, true));
   if (arrowNext) arrowNext.addEventListener('click', () => goTo(current + 1, true));
-  document.addEventListener('keydown', e => {
-    if (e.key === 'ArrowLeft')  goTo(current - 1, true);
-    if (e.key === 'ArrowRight') goTo(current + 1, true);
-  });
 
-  window.addEventListener('load', () => goTo(current, false));
   goTo(current, false);
 </script>
+{% endif %}
+
+{% if chart_data_json %}
+<!-- Evolucao mensal: dados + render do grafico de barras -->
+<script id="chart-data" type="application/json">{{ chart_data_json|safe }}</script>
+{% verbatim %}
+<script>
+(function () {
+  const dataEl  = document.getElementById('chart-data');
+  const svg     = document.getElementById('chartSvg');
+  if (!dataEl || !svg) return;
+
+  let CHART = {};
+  try { CHART = JSON.parse(dataEl.textContent || '{}'); } catch (e) { CHART = {}; }
+
+  const indSel  = document.getElementById('chartIndicador');
+  const anoSel  = document.getElementById('chartAno');
+  const tooltip = document.getElementById('chartTooltip');
+  const wrap    = document.getElementById('chartWrap');
+  const lblEl   = document.getElementById('chartCurrentLabel');
+  const totalEl = document.getElementById('chartTotal');
+  if (!indSel || !anoSel) return;
+
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const META = {
+    faturamento:           { label: 'Faturamento mensal',    money: true,  modo: 'soma'  },
+    custo:                 { label: 'Custo mensal',          money: true,  modo: 'soma'  },
+    lucro:                 { label: 'Lucro mensal',          money: true,  modo: 'soma'  },
+    atendimentos:          { label: 'No de atendimentos',    money: false, modo: 'soma'  },
+    lucro_por_atendimento: { label: 'Lucro por atendimento', money: true,  modo: 'media' }
+  };
+
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const W = 720, H = 320, padL = 56, padR = 18, padT = 26, padB = 38;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+
+  function fmtMoney(v) {
+    return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function fmtNum(v) {
+    return v.toLocaleString('pt-BR', { maximumFractionDigits: Number.isInteger(v) ? 0 : 2 });
+  }
+  function fmtFull(v, money) { return money ? fmtMoney(v) : fmtNum(v); }
+  function fmtCompact(v) {
+    const a = Math.abs(v);
+    if (a >= 1000000) return (v / 1000000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'M';
+    if (a >= 1000)    return (v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'k';
+    if (Number.isInteger(v)) return v.toLocaleString('pt-BR');
+    return v.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+  }
+  function mk(name, attrs) {
+    const e = document.createElementNS(SVGNS, name);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function render() {
+    const ano  = anoSel.value;
+    const ind  = indSel.value;
+    const meta = META[ind] || META.faturamento;
+    const serie = (CHART[ano] && CHART[ano][ind]) ? CHART[ano][ind] : new Array(12).fill(0);
+
+    lblEl.textContent = meta.label + ' / ' + ano;
+
+    const soma = serie.reduce(function (a, b) { return a + b; }, 0);
+    if (meta.modo === 'media') {
+      const comDados = serie.filter(function (v) { return v !== 0; }).length;
+      const media = comDados ? (soma / comDados) : 0;
+      totalEl.innerHTML = 'Media mensal: <strong>' + fmtFull(media, meta.money) + '</strong>';
+    } else {
+      totalEl.innerHTML = 'Total no ano: <strong>' + fmtFull(soma, meta.money) + '</strong>';
+    }
+
+    let maxV = Math.max.apply(null, [0].concat(serie));
+    let minV = Math.min.apply(null, [0].concat(serie));
+    if (maxV === 0 && minV === 0) maxV = 1;
+    const range = (maxV - minV) || 1;
+    const yOf = function (v) { return padT + plotH * (maxV - v) / range; };
+    const zeroY = yOf(0);
+
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    const TICKS = 4;
+    for (let i = 0; i <= TICKS; i++) {
+      const val = maxV - (range * i / TICKS);
+      const y = yOf(val);
+      svg.appendChild(mk('line', {
+        x1: padL, y1: y, x2: W - padR, y2: y,
+        class: (Math.abs(val) < 1e-9 ? 'chart-zero-line' : 'chart-grid-line')
+      }));
+      const tx = mk('text', { x: padL - 8, y: y + 3.5, class: 'chart-axis-label', 'text-anchor': 'end' });
+      tx.textContent = fmtCompact(val);
+      svg.appendChild(tx);
+    }
+
+    const n = serie.length;
+    const slot = plotW / n;
+    const bw = Math.min(slot * 0.6, 46);
+    const hasData = serie.some(function (v) { return v !== 0; });
+
+    serie.forEach(function (v, i) {
+      const cx = padL + slot * i + slot / 2;
+      const x = cx - bw / 2;
+      const positive = v >= 0;
+      const yTop = positive ? yOf(v) : zeroY;
+      const hgt = Math.max(0, Math.abs(yOf(v) - zeroY));
+
+      const rect = mk('rect', {
+        x: x, y: yTop, width: bw, height: hgt, rx: 4,
+        class: 'chart-bar ' + (positive ? 'pos' : 'neg'),
+        'data-month': i, 'data-val': v
+      });
+      svg.appendChild(rect);
+
+      if (hasData && v !== 0) {
+        const vt = mk('text', {
+          x: cx, y: positive ? (yTop - 5) : (yTop + hgt + 11), class: 'chart-bar-value'
+        });
+        vt.textContent = fmtCompact(v);
+        svg.appendChild(vt);
+      }
+
+      const mt = mk('text', { x: cx, y: H - padB + 18, class: 'chart-month-label' });
+      mt.textContent = MESES[i];
+      svg.appendChild(mt);
+    });
+
+    if (!hasData) {
+      const note = mk('text', { x: W / 2, y: padT + plotH / 2, class: 'chart-empty-note' });
+      note.textContent = 'Sem dados registrados para ' + ano;
+      svg.appendChild(note);
+    }
+  }
+
+  function showTip(evt) {
+    const r = evt.target;
+    if (!r.classList || !r.classList.contains('chart-bar')) return;
+    const i = +r.getAttribute('data-month');
+    const v = parseFloat(r.getAttribute('data-val'));
+    const meta = META[indSel.value] || META.faturamento;
+    tooltip.innerHTML = '<strong>' + fmtFull(v, meta.money) + '</strong>' + MESES[i] + ' / ' + anoSel.value;
+    tooltip.hidden = false;
+    const wrapRect = wrap.getBoundingClientRect();
+    const barRect = r.getBoundingClientRect();
+    tooltip.style.left = (barRect.left - wrapRect.left + barRect.width / 2) + 'px';
+    tooltip.style.top = (barRect.top - wrapRect.top) + 'px';
+  }
+  function hideTip() { tooltip.hidden = true; }
+
+  svg.addEventListener('mouseover', showTip);
+  svg.addEventListener('mouseout', hideTip);
+
+  indSel.addEventListener('change', render);
+  anoSel.addEventListener('change', render);
+  render();
+})();
+</script>
+{% endverbatim %}
 {% endif %}
 {% endblock %}

@@ -1564,6 +1564,7 @@ def _get_consultor_context_base(request):
 
 @_consultor_required
 def consultor_painel(request):
+    import json
     from datetime import date as date_cls
     from django.db.models import Sum, Count
 
@@ -1578,6 +1579,11 @@ def consultor_painel(request):
     hoje = date_cls.today()
     relatorios_meses = []
     indice_inicial = 0
+    # Evolucao mensal (grafico de barras): valores numericos crus por ano/mes.
+    chart_raw = {}
+    chart_data = {}
+    anos_disponiveis = []
+    ano_inicial = hoje.year
     kpi = {
         'lucro_mes': _fmt_money_br(Decimal('0')),
         'lucro_positivo': True,
@@ -1626,6 +1632,14 @@ def consultor_painel(request):
             lucro_por_hora = (lucro / horas_dec) if horas_dec else None
             duracao_media_min = round(total_min / total_atend) if total_atend else None
 
+            chart_raw[(ano, mes)] = {
+                'faturamento': float(faturado),
+                'custo': float(custos_total),
+                'lucro': float(lucro),
+                'atendimentos': total_atend,
+                'lucro_por_atendimento': float(lucro_por_atend) if lucro_por_atend is not None else 0.0,
+            }
+
             relatorios_meses.append({
                 'ano': ano,
                 'mes': mes,
@@ -1640,6 +1654,23 @@ def consultor_painel(request):
                 'lucro_por_atendimento': _fmt_money_br(lucro_por_atend) if lucro_por_atend is not None else None,
                 'lucro_por_hora': _fmt_money_br(lucro_por_hora) if lucro_por_hora is not None else None,
             })
+
+        anos_disponiveis = sorted({a for a, _m in chart_raw.keys()} | {hoje.year})
+        for _ano in anos_disponiveis:
+            _serie = {
+                'faturamento': [0.0] * 12,
+                'custo': [0.0] * 12,
+                'lucro': [0.0] * 12,
+                'atendimentos': [0] * 12,
+                'lucro_por_atendimento': [0.0] * 12,
+            }
+            for _mes in range(1, 13):
+                _bruto = chart_raw.get((_ano, _mes))
+                if _bruto:
+                    for _chave, _valor in _bruto.items():
+                        _serie[_chave][_mes - 1] = _valor
+            chart_data[str(_ano)] = _serie
+        ano_inicial = hoje.year if hoje.year in anos_disponiveis else (anos_disponiveis[-1] if anos_disponiveis else hoje.year)
 
         indice_inicial = next(
             (i for i, m in enumerate(relatorios_meses)
@@ -1665,6 +1696,9 @@ def consultor_painel(request):
         'relatorios_meses': relatorios_meses,
         'indice_inicial': indice_inicial,
         'kpi': kpi,
+        'chart_data_json': json.dumps(chart_data),
+        'chart_anos': sorted(anos_disponiveis, reverse=True),
+        'chart_ano_inicial': ano_inicial,
     })
     return render(request, 'core/consultor_painel.html', ctx)
 
