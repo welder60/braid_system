@@ -1,6 +1,6 @@
 site_name: Braid System
 site_description: Documentação do Braid System — gestão financeira para trancistas
-site_url: https://braid-system.dev
+site_url: https://welder60.github.io/braid_system
 docs_dir: docs
 
 theme:
