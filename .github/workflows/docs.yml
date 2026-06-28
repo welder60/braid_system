@@ -6,7 +6,7 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
-  pull_request: # <- Adicionado: Testa as alterações antes de aceitar o Merge na main
+  pull_request:
     branches: ["main"]
     paths:
       - "docs/**"
@@ -14,8 +14,15 @@ on:
 
   workflow_dispatch:
 
+# Permissões necessárias para o GitHub Actions fazer o deploy direto
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -38,12 +45,19 @@ jobs:
             mkdocs-material \
             mkdocs-minify-plugin
 
-      # PASSO 1: Roda sempre (na developer, na main e em PRs). 
-      # Se houver link quebrado ou erro, o workflow para aqui.
-      - name: Validar Documentação (Modo Estrito)
+      # Valida e gera a pasta "site/" com o HTML pronto
+      - name: Validar e Buildar Documentação
         run: mkdocs build --strict
 
-      # PASSO 2: O deploy real SÓ acontece se o commit for na branch main
-      - name: Publicar no GitHub Pages
-        if: github.ref == 'refs/heads/main' # <- Filtro de segurança
-        run: mkdocs gh-deploy --force
+      # Passo Novo 1: Transforma a pasta "site/" em um artefato de deploy (SÓ na main)
+      - name: Upload do artefato
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+      # Passo Novo 2: Faz o deploy direto na nuvem do GitHub Pages (SÓ na main)
+      - name: Deploy para o GitHub Pages
+        id: deployment
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/deploy-pages@v4
