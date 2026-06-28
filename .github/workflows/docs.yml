@@ -6,11 +6,23 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
 
   workflow_dispatch:
 
+# Permissões necessárias para o GitHub Actions fazer o deploy direto
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -33,5 +45,19 @@ jobs:
             mkdocs-material \
             mkdocs-minify-plugin
 
-      - name: Publicar no GitHub Pages
-        run: mkdocs gh-deploy --force
+      # Valida e gera a pasta "site/" com o HTML pronto
+      - name: Validar e Buildar Documentação
+        run: mkdocs build --strict
+
+      # Passo Novo 1: Transforma a pasta "site/" em um artefato de deploy (SÓ na main)
+      - name: Upload do artefato
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+      # Passo Novo 2: Faz o deploy direto na nuvem do GitHub Pages (SÓ na main)
+      - name: Deploy para o GitHub Pages
+        id: deployment
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/deploy-pages@v4
