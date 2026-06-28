@@ -380,7 +380,7 @@ atendimento = get_object_or_404(
 atendimento = get_object_or_404(Atendimento, pk=pk)
 ```
 
-**CSRF:** Toda view que altera estado usa `{% csrf_token %}` no form. O middleware CSRF está ativo globalmente — não o desabilite nem em views de API.
+**CSRF:** Toda view que altera estado usa `{% raw %}{% csrf_token %}{% endraw %}` no form. O middleware CSRF está ativo globalmente — não o desabilite nem em views de API.
 
 **XSS:** O sistema de templates do Django escapa HTML automaticamente. Nunca use `{{ variavel | safe }}` com conteúdo vindo do usuário.
 
