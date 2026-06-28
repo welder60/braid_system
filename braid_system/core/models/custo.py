@@ -63,7 +63,10 @@ class Custo(models.Model):
     def clean(self):
         if self.categoria_custo_id and self.categoria_custo.nivel_superior_id is None:
             raise ValidationError(
-                {'categoria_custo': 'Não é permitido vincular uma super categoria a um custo. Selecione uma subcategoria.'}
+                {'categoria_custo': (
+                    'Não é permitido vincular uma super categoria a um custo.'
+                    ' Selecione uma subcategoria.'
+                )}
             )
 
     def __str__(self):

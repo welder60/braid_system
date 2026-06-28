@@ -16,7 +16,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='estabelecimentousuario',
             name='usuario',
-            field=models.ForeignKey(db_column='id_usuario', on_delete=django.db.models.deletion.CASCADE, related_name='estabelecimento_usuarios', to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(db_column='id_usuario', on_delete=django.db.models.deletion.CASCADE,
+                                    related_name='estabelecimento_usuarios', to=settings.AUTH_USER_MODEL),
         ),
         migrations.DeleteModel(
             name='Usuario',

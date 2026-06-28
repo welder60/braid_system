@@ -365,7 +365,7 @@ if _SENTRY_DSN:
             # Captura automaticamente logs de ERROR ou acima como eventos Sentry.
             LoggingIntegration(
                 level=logging.INFO,        # registra breadcrumbs a partir de INFO
-                event_level=logging.ERROR, # cria evento Sentry a partir de ERROR
+                event_level=logging.ERROR,  # cria evento Sentry a partir de ERROR
             ),
         ],
         traces_sample_rate=float(

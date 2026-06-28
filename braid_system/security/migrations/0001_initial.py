@@ -18,9 +18,14 @@ class Migration(migrations.Migration):
             fields=[
                 ('password', models.CharField(max_length=128, verbose_name='password')),
                 ('last_login', models.DateTimeField(blank=True, null=True, verbose_name='last login')),
-                ('is_superuser', models.BooleanField(default=False, help_text='Designates that this user has all permissions without explicitly assigning them.', verbose_name='superuser status')),
+                ('is_superuser', models.BooleanField(default=False,
+                 help_text=(
+                  'Designates that this user has all permissions without explicitly assigning them.'
+                 ),
+                 verbose_name='superuser status')),
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('tipo', models.CharField(choices=[('admin', 'Admin'), ('profissional', 'Profissional'), ('gerente', 'Gerente')], max_length=50)),
+                ('tipo', models.CharField(choices=[
+                 ('admin', 'Admin'), ('profissional', 'Profissional'), ('gerente', 'Gerente')], max_length=50)),
                 ('nome', models.CharField(max_length=255)),
                 ('email', models.EmailField(max_length=254, unique=True)),
                 ('is_staff', models.BooleanField(default=False)),
@@ -29,7 +34,8 @@ class Migration(migrations.Migration):
                 ('data_exclusao', models.DateTimeField(blank=True, null=True)),
                 ('ativo', models.BooleanField(default=True)),
                 ('groups', models.ManyToManyField(blank=True, related_name='security_usuario_set', to='auth.group')),
-                ('user_permissions', models.ManyToManyField(blank=True, related_name='security_usuario_set', to='auth.permission')),
+                ('user_permissions', models.ManyToManyField(blank=True,
+                 related_name='security_usuario_set', to='auth.permission')),
             ],
             options={
                 'verbose_name': 'Usuario',

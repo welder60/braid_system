@@ -17,17 +17,22 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='estabelecimentousuario',
             name='data_inclusao',
-            field=models.DateTimeField(auto_now_add=True, default=datetime.datetime(2026, 6, 17, 14, 49, 25, 600075, tzinfo=datetime.timezone.utc)),
+            field=models.DateTimeField(auto_now_add=True, default=datetime.datetime(
+                2026, 6, 17, 14, 49, 25, 600075, tzinfo=datetime.timezone.utc)),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name='estabelecimentousuario',
             name='incluido_por',
-            field=models.ForeignKey(blank=True, db_column='id_incluido_por', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='usuarios_incluidos', to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(blank=True, db_column='id_incluido_por', null=True,
+                                    on_delete=django.db.models.deletion.SET_NULL,
+                                    related_name='usuarios_incluidos',
+                                    to=settings.AUTH_USER_MODEL),
         ),
         migrations.AddField(
             model_name='estabelecimentousuario',
             name='tipo_acesso',
-            field=models.CharField(choices=[('ver', 'Ver'), ('editar', 'Editar'), ('administrar', 'Administrar')], default='ver', max_length=20),
+            field=models.CharField(choices=[('ver', 'Ver'), ('editar', 'Editar'),
+                                   ('administrar', 'Administrar')], default='ver', max_length=20),
         ),
     ]

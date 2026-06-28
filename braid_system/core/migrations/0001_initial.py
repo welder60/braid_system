@@ -21,7 +21,8 @@ class Migration(migrations.Migration):
                 ('nome', models.CharField(max_length=255)),
                 ('pergunta', models.TextField()),
                 ('numero_maximo_selecao', models.IntegerField(default=1)),
-                ('contem_dado_sensivel', models.BooleanField(default=False, help_text='Sinaliza se a pergunta exige governanca estrita (ex: alergias)')),
+                ('contem_dado_sensivel', models.BooleanField(default=False,
+                 help_text='Sinaliza se a pergunta exige governanca estrita (ex: alergias)')),
             ],
             options={
                 'verbose_name': 'Caracteristica de Atendimento',
@@ -62,7 +63,8 @@ class Migration(migrations.Migration):
             name='Usuario',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('tipo', models.CharField(choices=[('admin', 'Admin'), ('profissional', 'Profissional'), ('gerente', 'Gerente')], max_length=50)),
+                ('tipo', models.CharField(choices=[
+                 ('admin', 'Admin'), ('profissional', 'Profissional'), ('gerente', 'Gerente')], max_length=50)),
                 ('nome', models.CharField(max_length=255)),
                 ('email', models.EmailField(max_length=254, unique=True)),
                 ('termos_aceitos', models.BooleanField(default=False)),
@@ -82,8 +84,12 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('nome', models.CharField(max_length=255)),
                 ('ilustracao', models.CharField(blank=True, max_length=500)),
-                ('caracteristica_atendimento', models.ForeignKey(db_column='id_caracteristica_atendimento', on_delete=django.db.models.deletion.CASCADE, related_name='opcoes', to='core.caracteristicaatendimento')),
-                ('nivel_superior', models.ForeignKey(blank=True, db_column='id_nivel_superior', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='subdivisoes', to='core.caracteristicaatendimentoopcao')),
+                ('caracteristica_atendimento', models.ForeignKey(db_column='id_caracteristica_atendimento',
+                 on_delete=django.db.models.deletion.CASCADE,
+                 related_name='opcoes', to='core.caracteristicaatendimento')),
+                ('nivel_superior', models.ForeignKey(blank=True, db_column='id_nivel_superior', null=True,
+                 on_delete=django.db.models.deletion.SET_NULL,
+                 related_name='subdivisoes', to='core.caracteristicaatendimentoopcao')),
             ],
             options={
                 'verbose_name': 'Opcao de Caracteristica de Atendimento',
@@ -97,7 +103,9 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('nome', models.CharField(max_length=255)),
                 ('ilustracao', models.CharField(blank=True, max_length=500)),
-                ('nivel_superior', models.ForeignKey(blank=True, db_column='id_nivel_superior', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='subcategorias', to='core.categoriacusto')),
+                ('nivel_superior', models.ForeignKey(blank=True, db_column='id_nivel_superior', null=True,
+                 on_delete=django.db.models.deletion.SET_NULL,
+                 related_name='subcategorias', to='core.categoriacusto')),
             ],
             options={
                 'verbose_name': 'Categoria de Custo',
@@ -112,8 +120,10 @@ class Migration(migrations.Migration):
                 ('data', models.DateField()),
                 ('hora', models.TimeField()),
                 ('duracao', models.IntegerField(help_text='Duracao em minutos')),
-                ('cliente', models.ForeignKey(db_column='id_cliente', on_delete=django.db.models.deletion.PROTECT, related_name='atendimentos', to='core.cliente')),
-                ('estabelecimento', models.ForeignKey(db_column='id_estabelecimento', on_delete=django.db.models.deletion.PROTECT, related_name='atendimentos', to='core.estabelecimento')),
+                ('cliente', models.ForeignKey(db_column='id_cliente',
+                 on_delete=django.db.models.deletion.PROTECT, related_name='atendimentos', to='core.cliente')),
+                ('estabelecimento', models.ForeignKey(db_column='id_estabelecimento',
+                 on_delete=django.db.models.deletion.PROTECT, related_name='atendimentos', to='core.estabelecimento')),
             ],
             options={
                 'verbose_name': 'Atendimento',
@@ -128,9 +138,12 @@ class Migration(migrations.Migration):
                 ('descricao', models.CharField(max_length=255)),
                 ('data', models.DateField()),
                 ('valor', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('atendimento', models.ForeignKey(blank=True, db_column='id_atendimento', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='custos', to='core.atendimento')),
-                ('categoria_custo', models.ForeignKey(db_column='id_categoria_custo', on_delete=django.db.models.deletion.PROTECT, related_name='custos', to='core.categoriacusto')),
-                ('estabelecimento', models.ForeignKey(db_column='id_estabelecimento', on_delete=django.db.models.deletion.PROTECT, related_name='custos', to='core.estabelecimento')),
+                ('atendimento', models.ForeignKey(blank=True, db_column='id_atendimento', null=True,
+                 on_delete=django.db.models.deletion.SET_NULL, related_name='custos', to='core.atendimento')),
+                ('categoria_custo', models.ForeignKey(db_column='id_categoria_custo',
+                 on_delete=django.db.models.deletion.PROTECT, related_name='custos', to='core.categoriacusto')),
+                ('estabelecimento', models.ForeignKey(db_column='id_estabelecimento',
+                 on_delete=django.db.models.deletion.PROTECT, related_name='custos', to='core.estabelecimento')),
             ],
             options={
                 'verbose_name': 'Custo',
@@ -141,7 +154,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='cliente',
             name='estabelecimento',
-            field=models.ForeignKey(db_column='id_estabelecimento', on_delete=django.db.models.deletion.PROTECT, related_name='clientes', to='core.estabelecimento'),
+            field=models.ForeignKey(db_column='id_estabelecimento', on_delete=django.db.models.deletion.PROTECT,
+                                    related_name='clientes', to='core.estabelecimento'),
         ),
         migrations.CreateModel(
             name='Pagamento',
@@ -149,7 +163,8 @@ class Migration(migrations.Migration):
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('forma_pagamento', models.CharField(max_length=100)),
                 ('valor', models.DecimalField(decimal_places=2, max_digits=10)),
-                ('atendimento', models.ForeignKey(db_column='id_atendimento', on_delete=django.db.models.deletion.CASCADE, related_name='pagamentos', to='core.atendimento')),
+                ('atendimento', models.ForeignKey(db_column='id_atendimento',
+                 on_delete=django.db.models.deletion.CASCADE, related_name='pagamentos', to='core.atendimento')),
             ],
             options={
                 'verbose_name': 'Pagamento',
@@ -161,8 +176,12 @@ class Migration(migrations.Migration):
             name='AtendimentoCaracteristica',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('atendimento', models.ForeignKey(db_column='id_atendimento', on_delete=django.db.models.deletion.CASCADE, related_name='caracteristicas', to='core.atendimento')),
-                ('opcao', models.ForeignKey(db_column='id_caracteristica_atendimento_opcao', on_delete=django.db.models.deletion.PROTECT, related_name='atendimento_caracteristicas', to='core.caracteristicaatendimentoopcao')),
+                ('atendimento', models.ForeignKey(db_column='id_atendimento',
+                 on_delete=django.db.models.deletion.CASCADE, related_name='caracteristicas', to='core.atendimento')),
+                ('opcao', models.ForeignKey(
+                 db_column='id_caracteristica_atendimento_opcao',
+                 on_delete=django.db.models.deletion.PROTECT,
+                 related_name='atendimento_caracteristicas', to='core.caracteristicaatendimentoopcao')),
             ],
             options={
                 'verbose_name': 'Caracteristica do Atendimento',
@@ -175,8 +194,12 @@ class Migration(migrations.Migration):
             name='EstabelecimentoUsuario',
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('estabelecimento', models.ForeignKey(db_column='id_estabelecimento', on_delete=django.db.models.deletion.CASCADE, related_name='estabelecimento_usuarios', to='core.estabelecimento')),
-                ('usuario', models.ForeignKey(db_column='id_usuario', on_delete=django.db.models.deletion.CASCADE, related_name='estabelecimento_usuarios', to='core.usuario')),
+                ('estabelecimento', models.ForeignKey(
+                 db_column='id_estabelecimento',
+                 on_delete=django.db.models.deletion.CASCADE,
+                 related_name='estabelecimento_usuarios', to='core.estabelecimento')),
+                ('usuario', models.ForeignKey(db_column='id_usuario', on_delete=django.db.models.deletion.CASCADE,
+                 related_name='estabelecimento_usuarios', to='core.usuario')),
             ],
             options={
                 'verbose_name': 'Estabelecimento Usuario',

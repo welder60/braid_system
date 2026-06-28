@@ -383,7 +383,8 @@ def _ctx_opcoes(caracteristica, editando=None, pre_selecionado=None):
     return {
         'caracteristica': caracteristica,
         'opcoes_raiz': opcoes_raiz,
-        'total_opcoes': CaracteristicaAtendimentoOpcao.objects.filter(caracteristica_atendimento=caracteristica).count(),
+        'total_opcoes': CaracteristicaAtendimentoOpcao.objects.filter(
+            caracteristica_atendimento=caracteristica).count(),
         'editando': editando,
         'pre_selecionado': pre_selecionado,
     }
@@ -1009,7 +1010,8 @@ def atendimento_criar(request):
                 )
 
         messages.success(request, f'Atendimento de "{cliente.apelido}" registrado com sucesso!')
-        logger.info('Atendimento criado: id=%s estabelecimento=%s user=%s', atendimento.pk, estabelecimento.pk, request.user.pk)
+        logger.info('Atendimento criado: id=%s estabelecimento=%s user=%s',
+                    atendimento.pk, estabelecimento.pk, request.user.pk)
     except Exception as exc:  # noqa: BLE001
         logger.exception('Erro ao criar atendimento: estabelecimento=%s user=%s', estabelecimento.pk, request.user.pk)
         messages.error(request, f'Erro ao registrar atendimento: {exc}')
@@ -1078,7 +1080,9 @@ def atendimento_editar(request, pk):
             for e in erros:
                 messages.error(request, e)
 
-    return render(request, 'core/atendimentos.html', _ctx_atendimentos(request, editando=atendimento, mes=mes, ano=ano))
+    return render(
+        request, 'core/atendimentos.html',
+        _ctx_atendimentos(request, editando=atendimento, mes=mes, ano=ano))
 
 
 def atendimento_excluir(request, pk):
@@ -1194,7 +1198,10 @@ def custo_criar(request):
             try:
                 categoria = CategoriaCusto.objects.get(pk=categoria_id, vinculado_atendimento=False)
                 if categoria.subcategorias.exists():
-                    messages.error(request, 'Não é permitido vincular uma categoria que possui subcategorias. Selecione uma categoria folha.')
+                    messages.error(
+                        request,
+                        'Não é permitido vincular uma categoria que possui subcategorias.'
+                        ' Selecione uma categoria folha.')
                 else:
                     Custo.objects.create(
                         estabelecimento=estabelecimento,
@@ -1208,7 +1215,8 @@ def custo_criar(request):
             except CategoriaCusto.DoesNotExist:
                 messages.error(request, 'Categoria inválida.')
             except Exception as exc:
-                logger.exception('Erro ao criar custo: estabelecimento=%s user=%s', estabelecimento.pk, request.user.pk)
+                logger.exception('Erro ao criar custo: estabelecimento=%s user=%s',
+                                 estabelecimento.pk, request.user.pk)
                 messages.error(request, f'Erro ao salvar: {exc}')
         else:
             for e in erros:
@@ -1238,7 +1246,10 @@ def custo_editar(request, pk):
         try:
             categoria = CategoriaCusto.objects.get(pk=categoria_id, vinculado_atendimento=False)
             if categoria.subcategorias.exists():
-                messages.error(request, 'Não é permitido vincular uma categoria que possui subcategorias. Selecione uma categoria folha.')
+                messages.error(
+                    request,
+                    'Não é permitido vincular uma categoria que possui subcategorias.'
+                    ' Selecione uma categoria folha.')
             else:
                 custo.categoria_custo = categoria
                 custo.descricao = descricao
@@ -1543,7 +1554,6 @@ def _consultor_required(view_func):
     return _wrapped
 
 
-
 # A seleção de estabelecimento passa a ser feita UNICAMENTE pelo perfil do
 # usuário (view `perfil`), que grava em 'estabelecimento_ativo_id'. O painel
 # do consultor lê essa mesma seleção (via access.get_estabelecimento_ativo),
@@ -1683,7 +1693,8 @@ def consultor_painel(request):
                     for _chave, _valor in _bruto.items():
                         _serie[_chave][_mes - 1] = _valor
             chart_data[str(_ano)] = _serie
-        ano_inicial = hoje.year if hoje.year in anos_disponiveis else (anos_disponiveis[-1] if anos_disponiveis else hoje.year)
+        ano_inicial = hoje.year if hoje.year in anos_disponiveis else (
+            anos_disponiveis[-1] if anos_disponiveis else hoje.year)
 
         indice_inicial = next(
             (i for i, m in enumerate(relatorios_meses)
@@ -1833,7 +1844,6 @@ def consultor_exportar_csv(request):
     """Exporta CSV do resumo financeiro mensal."""
     import csv
     from django.http import HttpResponse
-    from datetime import date as date_cls
     from django.db.models import Sum, Count
 
     ctx = _get_consultor_context_base(request)
@@ -1857,7 +1867,8 @@ def consultor_exportar_csv(request):
     response['Content-Disposition'] = f'attachment; filename="relatorio_{nome_base}{sufixo}.csv"'
 
     writer = csv.writer(response, delimiter=';')
-    writer.writerow(['Mês', 'Atendimentos', 'Horas', 'Faturado (R$)', 'Custos (R$)', 'Lucro (R$)', 'Lucro/Atend. (R$)'])
+    writer.writerow(['Mês', 'Atendimentos', 'Horas', 'Faturado (R$)',
+                    'Custos (R$)', 'Lucro (R$)', 'Lucro/Atend. (R$)'])
 
     qs_at = Atendimento.objects.filter(estabelecimento=estabelecimento)
     qs_pag = Pagamento.objects.filter(atendimento__estabelecimento=estabelecimento)
@@ -1881,7 +1892,8 @@ def consultor_exportar_csv(request):
         agg = qs_at.filter(data__year=a, data__month=m).aggregate(c=Count('id'), minutos=Sum('duracao'))
         qtd = agg['c'] or 0
         total_min = agg['minutos'] or 0
-        fat = qs_pag.filter(atendimento__data__year=a, atendimento__data__month=m).aggregate(s=Sum('valor'))['s'] or Decimal('0')
+        fat = qs_pag.filter(atendimento__data__year=a, atendimento__data__month=m).aggregate(
+            s=Sum('valor'))['s'] or Decimal('0')
         cus = qs_cus.filter(data__year=a, data__month=m).aggregate(s=Sum('valor'))['s'] or Decimal('0')
         lucro = fat - cus
         lucro_por_atend = (lucro / qtd) if qtd else None
@@ -1892,7 +1904,8 @@ def consultor_exportar_csv(request):
                          str(fat).replace('.', ','),
                          str(cus).replace('.', ','),
                          str(lucro).replace('.', ','),
-                         str(lucro_por_atend.quantize(Decimal('0.01'))).replace('.', ',') if lucro_por_atend is not None else ''])
+                         str(lucro_por_atend.quantize(Decimal('0.01'))).replace('.', ',')
+                         if lucro_por_atend is not None else ''])
 
     return response
 
@@ -1929,7 +1942,7 @@ def consultor_relatorio_atendimentos(request):
 
     if data_ini > data_fim:
         data_ini, data_fim = data_fim, date_cls(data_ini.year, data_ini.month,
-                                                 calendar.monthrange(data_ini.year, data_ini.month)[1])
+                                                calendar.monthrange(data_ini.year, data_ini.month)[1])
         ano_ini, mes_ini = data_ini.year, data_ini.month
         ano_fim, mes_fim = data_fim.year, data_fim.month
 
@@ -2195,7 +2208,7 @@ def consultor_dashboard_caracteristicas(request):
         # Agrega
         agg = qs.aggregate(qtd=Count('id'), minutos=Sum('duracao'))
         total_atend = agg['qtd'] or 0
-        total_min   = agg['minutos'] or 0
+        total_min = agg['minutos'] or 0
 
         faturado = (
             Pagamento.objects
@@ -2239,8 +2252,8 @@ def consultor_dashboard_caracteristicas(request):
 
         lucro = faturado - custos_total
         horas_dec = (Decimal(total_min) / Decimal(60)) if total_min else Decimal('0')
-        lucro_por_atend   = (lucro / total_atend) if total_atend else None
-        lucro_por_hora    = (lucro / horas_dec)   if horas_dec   else None
+        lucro_por_atend = (lucro / total_atend) if total_atend else None
+        lucro_por_hora = (lucro / horas_dec) if horas_dec else None
         duracao_media_min = round(total_min / total_atend) if total_atend else None
 
         kpi = {
@@ -2254,7 +2267,7 @@ def consultor_dashboard_caracteristicas(request):
             'tem_custos_individuais': custos_individuais > 0,
             'duracao_media':      _fmt_horas_br(duracao_media_min) if duracao_media_min is not None else None,
             'lucro_por_atend':    _fmt_money_br(lucro_por_atend) if lucro_por_atend is not None else None,
-            'lucro_por_hora':     _fmt_money_br(lucro_por_hora)  if lucro_por_hora  is not None else None,
+            'lucro_por_hora':     _fmt_money_br(lucro_por_hora) if lucro_por_hora is not None else None,
         }
 
     import json
