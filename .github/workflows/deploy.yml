@@ -40,20 +40,28 @@ jobs:
       # Crie um Deploy Hook em: Dashboard > seu serviço > Settings > Deploy Hook
       # Salve a URL em: Settings > Secrets > RENDER_DEPLOY_HOOK_URL
       # ──────────────────────────────────────────────────────────
-      - name: Deploy to Render
-        run: |
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+      # ──────────────────────────────────────────────────────────
+      # RENDER — descomente e configure se usar Render
+      # Crie um Deploy Hook em: Dashboard > seu serviço > Settings > Deploy Hook
+      # Salve a URL em: Settings > Secrets > RENDER_DEPLOY_HOOK_URL
+      # ──────────────────────────────────────────────────────────
+      # - name: Deploy to Render
+      #   run: |
+      #     curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
 
       # ──────────────────────────────────────────────────────────
-      # RAILWAY — descomente e configure se usar Railway
+      # RAILWAY — configure:
+      # 1. Gere um token em: railway.app > Account Settings > Tokens
+      # 2. Salve como RAILWAY_TOKEN em: GitHub repo > Settings > Secrets
+      # 3. Salve o nome do serviço como RAILWAY_SERVICE
       # ──────────────────────────────────────────────────────────
-      # - name: Install Railway CLI
-      #   run: npm install -g @railway/cli
-      #
-      # - name: Deploy to Railway
-      #   env:
-      #     RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      #   run: railway up --service ${{ secrets.RAILWAY_SERVICE }}
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service ${{ secrets.RAILWAY_SERVICE }}
 
       - name: Notify success
         if: success()
