@@ -1,22 +1,23 @@
 site_name: Braid System
 site_description: Documentação do Braid System — gestão financeira para trancistas
+site_url: https://braid-system.dev
 docs_dir: docs
 
 theme:
   name: material
   language: pt
+  logo: assets/logo.png
+  favicon: assets/logo.png
   font:
     text: Inter
     code: JetBrains Mono
   palette:
-    # Tema claro (padrão)
     - scheme: default
       primary: custom
       accent: custom
       toggle:
         icon: material/weather-night
         name: Modo escuro
-    # Tema escuro
     - scheme: slate
       primary: custom
       accent: custom
@@ -27,9 +28,22 @@ theme:
     - navigation.instant
     - navigation.tracking
     - navigation.top
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.footer
     - search.highlight
     - search.suggest
+    - search.share
     - content.code.copy
+    - content.code.annotate
+    - toc.follow
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/braid-system
 
 extra_css:
   - stylesheets/extra.css
@@ -42,3 +56,4 @@ nav:
       - Manual de Identidade Visual: manual-identidade-visual.md
   - Desenvolvimento:
       - Regras de Desenvolvimento: regras-de-desenvolvimento.md
+      - Regras de Segurança: seguranca.md
