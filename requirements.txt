@@ -16,5 +16,8 @@ requests>=2.31.0
 # Storage de arquivos (produção: Supabase Storage via protocolo S3)
 django-storages[s3]>=1.14.4
 
+# Observabilidade
+sentry-sdk[django]>=2.0.0
+
 # Testes / cobertura
 coverage>=7.4

@@ -13,6 +13,7 @@ For more information on this file, see
 https://docs.djangoproject.com/en/6.0/topics/settings/
 """
 
+import logging
 import os
 from pathlib import Path
 
@@ -296,3 +297,86 @@ GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get('GOOGLE_OAUTH_CLIENT_SECRET', '')
 GOOGLE_OAUTH_DEFAULT_TIPO = os.environ.get(
     'GOOGLE_OAUTH_DEFAULT_TIPO', 'profissional',
 )
+
+
+# --------------------------------------------------------------------------- #
+# Logging estruturado (stdout)                                                 #
+# --------------------------------------------------------------------------- #
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {name} {process:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            # Em produção, formato detalhado; em desenvolvimento, simples.
+            'formatter': 'simple' if DEBUG else 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': os.environ.get('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        # Todos os módulos do projeto herdam este logger.
+        'braid_system': {
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+
+# --------------------------------------------------------------------------- #
+# Sentry (error tracking em produção)                                          #
+# --------------------------------------------------------------------------- #
+# Defina SENTRY_DSN no ambiente para ativar. Em desenvolvimento, deixe vazio  #
+# (ou omita) para não enviar eventos ao Sentry.                                #
+_SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+if _SENTRY_DSN:
+    import sentry_sdk  # noqa: PLC0415
+    from sentry_sdk.integrations.django import DjangoIntegration  # noqa: PLC0415
+    from sentry_sdk.integrations.logging import LoggingIntegration  # noqa: PLC0415
+
+    sentry_sdk.init(
+        dsn=_SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(),
+            # Captura automaticamente logs de ERROR ou acima como eventos Sentry.
+            LoggingIntegration(
+                level=logging.INFO,        # registra breadcrumbs a partir de INFO
+                event_level=logging.ERROR, # cria evento Sentry a partir de ERROR
+            ),
+        ],
+        traces_sample_rate=float(
+            os.environ.get('SENTRY_TRACES_SAMPLE_RATE', '0.0' if DEBUG else '0.1')
+        ),
+        profiles_sample_rate=float(
+            os.environ.get('SENTRY_PROFILES_SAMPLE_RATE', '0.0')
+        ),
+        environment='development' if DEBUG else 'production',
+        # Não enviar dados pessoais (IPs, sessões) por padrão.
+        send_default_pii=False,
+        # Versão do release (opcional: preencha via CI com o commit hash).
+        release=os.environ.get('GIT_COMMIT', None),
+    )

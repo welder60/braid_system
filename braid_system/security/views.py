@@ -7,6 +7,8 @@ Fluxo (Authorization Code + OIDC):
   2. ``google_callback`` -> recebe o retorno do Google, troca o code por tokens,
                            valida o id_token e autentica (ou cria) o Usuario.
 """
+import logging
+
 from authlib.integrations.base_client import OAuthError
 from django.conf import settings
 from django.contrib import messages
@@ -16,6 +18,8 @@ from django.urls import reverse
 
 from .models import Usuario
 from .oauth import oauth, google_oauth_configured
+
+logger = logging.getLogger(__name__)
 
 # Como autenticamos sem chamar authenticate(), informamos o backend ao login().
 AUTH_BACKEND = 'django.contrib.auth.backends.ModelBackend'
@@ -45,6 +49,7 @@ def google_callback(request):
     try:
         token = oauth.google.authorize_access_token(request)
     except OAuthError:
+        logger.warning('OAuthError no callback do Google', exc_info=True)
         messages.error(
             request, 'Não foi possível concluir o login com Google. '
                      'Tente novamente.'
@@ -80,10 +85,12 @@ def google_callback(request):
         user.save()
 
     if not user.ativo:
+        logger.warning('Tentativa de login Google com conta inativa: email=%s', email)
         messages.error(
             request, 'Sua conta está inativa. Procure um administrador.'
         )
         return redirect('home')
 
     auth_login(request, user, backend=AUTH_BACKEND)
+    logger.info('Login Google bem-sucedido: user=%s novo=%s', user.pk, user._state.adding)
     return redirect('gestao')

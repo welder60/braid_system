@@ -1,3 +1,4 @@
+import logging
 import os
 from functools import wraps
 from decimal import Decimal, InvalidOperation
@@ -17,6 +18,7 @@ from .models import (
 from braid_system.security.models.usuario import Usuario
 from .access import is_admin, get_estabelecimento_ativo
 
+logger = logging.getLogger(__name__)
 
 # Apenas o papel 'admin' é administrador para fins de isolamento de dados.
 # (O papel 'consultor' NÃO é exceção: vê somente estabelecimentos vinculados.)
@@ -37,6 +39,10 @@ def admin_required(view_func):
             messages.error(request, 'Faça login para acessar a administração.')
             return redirect('home')
         if not is_admin(request.user):
+            logger.warning(
+                'Acesso negado à área admin: user=%s view=%s',
+                request.user.pk, view_func.__name__,
+            )
             messages.error(request, 'Acesso restrito à área de administrador.')
             return redirect('gestao')
         return view_func(request, *args, **kwargs)
@@ -62,8 +68,10 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
+            logger.info('Login bem-sucedido: user=%s', user.pk)
             return redirect('gestao')
         else:
+            logger.warning('Tentativa de login falhou: username=%s', username)
             messages.error(request, 'Usuário ou senha inválidos.')
             return redirect('home')
     return redirect('home')
@@ -1001,7 +1009,9 @@ def atendimento_criar(request):
                 )
 
         messages.success(request, f'Atendimento de "{cliente.apelido}" registrado com sucesso!')
+        logger.info('Atendimento criado: id=%s estabelecimento=%s user=%s', atendimento.pk, estabelecimento.pk, request.user.pk)
     except Exception as exc:  # noqa: BLE001
+        logger.exception('Erro ao criar atendimento: estabelecimento=%s user=%s', estabelecimento.pk, request.user.pk)
         messages.error(request, f'Erro ao registrar atendimento: {exc}')
 
     mes = int(request.POST.get('mes', 0)) or None
@@ -1062,6 +1072,7 @@ def atendimento_editar(request, pk):
                 messages.success(request, 'Atendimento atualizado.')
                 return redirect('atendimentos')
             except Exception as exc:  # noqa: BLE001
+                logger.exception('Erro ao editar atendimento: pk=%s user=%s', pk, request.user.pk)
                 messages.error(request, f'Erro ao atualizar: {exc}')
         else:
             for e in erros:
@@ -1200,6 +1211,7 @@ def custo_criar(request):
             except CategoriaCusto.DoesNotExist:
                 messages.error(request, 'Categoria inválida.')
             except Exception as exc:
+                logger.exception('Erro ao criar custo: estabelecimento=%s user=%s', estabelecimento.pk, request.user.pk)
                 messages.error(request, f'Erro ao salvar: {exc}')
         else:
             for e in erros:
@@ -1524,6 +1536,10 @@ def _consultor_required(view_func):
             messages.error(request, 'Faça login para acessar o painel.')
             return redirect('home')
         if request.user.tipo not in ('consultor', 'admin'):
+            logger.warning(
+                'Acesso negado ao painel consultor: user=%s tipo=%s view=%s',
+                request.user.pk, request.user.tipo, view_func.__name__,
+            )
             messages.error(request, 'Acesso restrito ao painel do consultor.')
             return redirect('gestao')
         return view_func(request, *args, **kwargs)
