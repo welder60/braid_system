@@ -1,0 +1,207 @@
+{% extends 'core/admin_base.html' %}
+
+{% block title %}Usuários{% endblock %}
+
+{% block nav_usuarios %}class="active"{% endblock %}
+
+{% block extra_styles %}
+  /* ── Badge de tipo ── */
+  .tipo-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.55rem;
+    border-radius: 20px;
+  }
+  .tipo-admin        { background: #fde8e0; color: var(--color-terracota); }
+  .tipo-consultor    { background: #ece7f6; color: #5a3a8c; }
+  .tipo-gerente      { background: #fef9ec; color: var(--color-earth); }
+  .tipo-profissional { background: #eaf4ec; color: var(--color-moss); }
+
+  /* ── Badge ativo/inativo ── */
+  .status-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 20px;
+  }
+  .status-ativo   { background: #d4edda; color: #155724; }
+  .status-inativo { background: #f8d7da; color: #721c24; }
+{% endblock %}
+
+{% block content %}
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">Usuários</h2>
+      <p class="page-subtitle" style="margin-bottom:0">Gerencie os usuários cadastrados no sistema</p>
+    </div>
+  </div>
+
+  {% if messages %}
+  <ul class="messages">
+    {% for msg in messages %}
+    <li class="{{ msg.tags }}">{{ msg }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <div class="two-col">
+
+    <!-- ── Painel esquerdo: formulário ── -->
+    <div class="card">
+      <div class="card-header">
+        <h3>{% if editando %}✏️ Editar Usuário{% else %}➕ Novo Usuário{% endif %}</h3>
+      </div>
+      <div class="card-body">
+        <form method="post"
+          action="{% if editando %}{% url 'usuario_editar' editando.pk %}{% else %}{% url 'usuario_criar' %}{% endif %}">
+          {% csrf_token %}
+
+          <div class="form-group">
+            <label for="nome">Nome</label>
+            <input type="text" id="nome" name="nome" class="form-control"
+              placeholder="Nome completo"
+              value="{{ editando.nome|default:'' }}" required maxlength="255" autofocus />
+          </div>
+
+          <div class="form-group">
+            <label for="email">E-mail</label>
+            <input type="email" id="email" name="email" class="form-control"
+              placeholder="usuario@exemplo.com"
+              value="{{ editando.email|default:'' }}" required maxlength="254"
+              {% if editando %}readonly{% endif %} />
+            {% if editando %}
+            <p class="form-hint">O e-mail não pode ser alterado após o cadastro.</p>
+            {% endif %}
+          </div>
+
+          <div class="form-group">
+            <label for="tipo">Tipo</label>
+            <select id="tipo" name="tipo" class="form-control" required>
+              <option value="">Selecione…</option>
+              <option value="admin"        {% if editando.tipo == 'admin' %}selected{% endif %}>Admin</option>
+              <option value="consultor"    {% if editando.tipo == 'consultor' %}selected{% endif %}>Consultor</option>
+              <option value="gerente"      {% if editando.tipo == 'gerente' %}selected{% endif %}>Gerente</option>
+              <option value="profissional" {% if editando.tipo == 'profissional' %}selected{% endif %}>Profissional</option>
+            </select>
+          </div>
+
+          {% if not editando %}
+          <div class="form-group">
+            <label for="password">Senha</label>
+            <input type="password" id="password" name="password" class="form-control"
+              placeholder="Mínimo 8 caracteres" minlength="8" required />
+          </div>
+          {% endif %}
+
+          {% if editando %}
+          <div class="form-group">
+            <label for="ativo">Status</label>
+            <select id="ativo" name="ativo" class="form-control">
+              <option value="1" {% if editando.ativo %}selected{% endif %}>Ativo</option>
+              <option value="0" {% if not editando.ativo %}selected{% endif %}>Inativo</option>
+            </select>
+          </div>
+          {% endif %}
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+              {% if editando %}💾 Salvar alterações{% else %}➕ Adicionar{% endif %}
+            </button>
+            {% if editando %}
+            <a href="{% url 'usuarios' %}" class="btn btn-ghost">Cancelar</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Painel direito: lista ── -->
+    <div class="card">
+      <div class="card-header">
+        <h3>👥 Usuários cadastrados</h3>
+        <span style="font-size:0.8rem;color:#aaa;">{{ total_usuarios }} registro{{ total_usuarios|pluralize:",s" }}</span>
+      </div>
+
+      {% if usuarios %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome / E-mail</th>
+              <th>Tipo</th>
+              <th>Status</th>
+              <th style="text-align:right;">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in usuarios %}
+            <tr>
+              <td>
+                <strong>{{ u.nome }}</strong><br>
+                <span style="font-size:0.8rem;color:#888;">{{ u.email }}</span>
+              </td>
+              <td><span class="tipo-badge tipo-{{ u.tipo }}">{{ u.get_tipo_display }}</span></td>
+              <td>
+                {% if u.ativo %}
+                  <span class="status-badge status-ativo">Ativo</span>
+                {% else %}
+                  <span class="status-badge status-inativo">Inativo</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="td-actions">
+                  <a href="{% url 'usuario_editar' u.pk %}" class="btn btn-secondary btn-sm">✏️ Editar</a>
+                  <button class="btn btn-danger btn-sm"
+                    onclick="abrirModal('{{ u.pk }}', '{{ u.nome|escapejs }}')">🗑️ Excluir</button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty"><p>Nenhum usuário cadastrado ainda.</p></div>
+      {% endif %}
+    </div>
+
+  </div><!-- /.two-col -->
+
+  <!-- Modal de confirmação de exclusão -->
+  <div class="modal-overlay" id="modal-excluir">
+    <div class="modal">
+      <h4>Confirmar exclusão</h4>
+      <p id="modal-msg">Deseja excluir este usuário?</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <form id="form-excluir" method="post" action="">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Excluir</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function abrirModal(pk, nome) {
+    document.getElementById('modal-msg').textContent =
+      'Deseja excluir "' + nome + '"? Esta ação não pode ser desfeita.';
+    document.getElementById('form-excluir').action =
+      '{% url "usuario_excluir" "00000000-0000-0000-0000-000000000000" %}'.replace(
+        '00000000-0000-0000-0000-000000000000', pk);
+    document.getElementById('modal-excluir').classList.add('open');
+  }
+  function fecharModal() {
+    document.getElementById('modal-excluir').classList.remove('open');
+  }
+  document.getElementById('modal-excluir').addEventListener('click', function(e) {
+    if (e.target === this) fecharModal();
+  });
+</script>
+{% endblock %}

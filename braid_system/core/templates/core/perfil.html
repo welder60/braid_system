@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Perfil — Braid System</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'core/css/navbar.css' %}">
+  <style>
+    :root {
+      --color-moss:      #2F3B2E;
+      --color-forest:    #1E2A1F;
+      --color-terracota: #8C4A2F;
+      --color-earth:     #5A3A20;
+      --color-gold:      #C8A15A;
+      --color-sand:      #E7DAC1;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--color-sand);
+      color: var(--color-forest);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    main {
+      flex: 1;
+      padding: 2.5rem 1.5rem;
+      display: flex;
+      justify-content: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(30,42,31,0.09);
+      padding: 2rem 2.5rem;
+      width: 100%;
+      max-width: 480px;
+    }
+    .card h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--color-forest);
+      margin-bottom: 1.5rem;
+    }
+    .info-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .info-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #999;
+    }
+    .info-value {
+      font-size: 0.95rem;
+      color: var(--color-forest);
+    }
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      margin: 1.5rem 0;
+    }
+    /* Estabelecimento selector */
+    .est-section h3 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--color-forest);
+      margin-bottom: 1rem;
+    }
+    .est-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .est-option {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.65rem 0.9rem;
+      border: 1.5px solid rgba(0,0,0,0.1);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .est-option:has(input:checked) {
+      border-color: var(--color-moss);
+      background: rgba(47,59,46,0.05);
+    }
+    .est-option input[type="radio"] { accent-color: var(--color-moss); }
+    .est-option-name {
+      font-size: 0.9rem;
+      color: var(--color-forest);
+    }
+    .est-active-badge {
+      margin-left: auto;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--color-moss);
+      background: rgba(47,59,46,0.1);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+    }
+    .btn-salvar {
+      display: inline-block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--color-moss);
+      padding: 0.6rem 1.25rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-salvar:hover { opacity: 0.85; }
+    /* Alert: nenhum estabelecimento */
+    .alert-no-est {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      padding: 0.85rem 1rem;
+      background: #fff8f0;
+      border: 1.5px solid #e8a96a;
+      border-radius: 8px;
+      color: var(--color-earth);
+      font-size: 0.875rem;
+    }
+    .alert-no-est svg { flex-shrink: 0; margin-top: 1px; }
+    /* Django messages */
+    .messages { list-style: none; margin-bottom: 1.25rem; }
+    .messages li {
+      padding: 0.6rem 0.9rem;
+      border-radius: 7px;
+      font-size: 0.85rem;
+      margin-bottom: 0.4rem;
+    }
+    .messages li.success { background: #edf7ee; color: #2a6b2f; border: 1px solid #a8d8a9; }
+    .messages li.error   { background: #fdf0ef; color: #8c2a22; border: 1px solid #f0b0aa; }
+    .btn-logout {
+      display: inline-block;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--color-terracota);
+      text-decoration: none;
+      padding: 0.6rem 1.25rem;
+      border: 1.5px solid var(--color-terracota);
+      border-radius: 8px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-logout:hover {
+      background: var(--color-terracota);
+      color: #fff;
+    }
+    /* Ações do rodapé do perfil */
+    .perfil-actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn-admin {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--color-moss);
+      text-decoration: none;
+      padding: 0.6rem 1.25rem;
+      border: 1.5px solid var(--color-moss);
+      border-radius: 8px;
+      transition: opacity 0.15s;
+    }
+    .btn-admin:hover { opacity: 0.85; }
+  </style>
+</head>
+<body>
+
+  {% include 'core/_navbar.html' with navbar_title="Perfil" navbar_show_back=True navbar_show_user=False %}
+
+  <main>
+    <div class="card">
+      <h2>Meu perfil</h2>
+
+      {% if messages %}
+        <ul class="messages">
+          {% for msg in messages %}
+            <li class="{{ msg.tags }}">{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      <div class="info-row">
+        <span class="info-label">Nome</span>
+        <span class="info-value">{{ user.nome }}</span>
+      </div>
+
+      <div class="info-row">
+        <span class="info-label">E-mail</span>
+        <span class="info-value">{{ user.email }}</span>
+      </div>
+
+      <div class="info-row">
+        <span class="info-label">Tipo de acesso</span>
+        <span class="info-value">{{ user.get_tipo_display }}</span>
+      </div>
+
+      <hr class="divider">
+
+      <div class="est-section">
+        <h3>Estabelecimento</h3>
+
+        {% if not estabelecimentos_usuario %}
+          <div class="alert-no-est">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>Nenhum estabelecimento vinculado à sua conta. Solicite acesso a um administrador.</span>
+          </div>
+
+        {% elif estabelecimentos_usuario|length == 1 %}
+          <div class="info-row" style="margin-bottom:0">
+            <span class="info-label">Estabelecimento padrão</span>
+            <span class="info-value">{{ estabelecimentos_usuario.0.nome }}</span>
+          </div>
+
+        {% else %}
+          <form method="post">
+            {% csrf_token %}
+            <div class="est-options">
+              {% for est in estabelecimentos_usuario %}
+                <label class="est-option">
+                  <input
+                    type="radio"
+                    name="estabelecimento_id"
+                    value="{{ est.pk }}"
+                    {% if estabelecimento_ativo.pk == est.pk %}checked{% endif %}
+                  >
+                  <span class="est-option-name">{{ est.nome }}</span>
+                  {% if estabelecimento_ativo.pk == est.pk %}
+                    <span class="est-active-badge">ativo</span>
+                  {% endif %}
+                </label>
+              {% endfor %}
+            </div>
+            <button type="submit" class="btn-salvar">Confirmar seleção</button>
+          </form>
+        {% endif %}
+      </div>
+
+      <hr class="divider">
+
+      <div class="perfil-actions">
+        {% if user.is_admin_role %}
+          <a href="{% url 'admin_painel' %}" class="btn-admin">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            Painel de administração
+          </a>
+        {% endif %}
+        <a href="{% url 'logout' %}" class="btn-logout">Sair da conta</a>
+      </div>
+    </div>
+  </main>
+
+</body>
+</html>

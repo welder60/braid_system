@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atendimentos — Braid System</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'core/css/navbar.css' %}">
+  <style>
+    :root {
+      --color-moss:   #2F3B2E;
+      --color-forest: #1E2A1F;
+      --color-earth:  #5A3A20;
+      --color-gold:   #C8A15A;
+      --color-sand:   #E7DAC1;
+      --color-light:  #faf8f4;
+      --color-border: #d9cdb8;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--color-sand);
+      color: var(--color-forest);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .page-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      height: calc(100vh - 56px);
+    }
+
+    /* Carrossel horizontal de meses */
+    .month-bar {
+      background: var(--color-moss);
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .month-arrow {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      color: rgba(231,218,193,0.6);
+      font-size: 1.1rem;
+      padding: 0 0.75rem;
+      height: 44px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: color 0.15s;
+    }
+    .month-arrow:hover { color: var(--color-sand); }
+    .month-track-wrap {
+      flex: 1;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-behavior: smooth;
+    }
+    .month-track-wrap::-webkit-scrollbar { display: none; }
+    .month-track {
+      display: flex;
+      gap: 0.25rem;
+      padding: 0.35rem 0.25rem;
+    }
+    .month-btn {
+      flex-shrink: 0;
+      padding: 0.35rem 0.85rem;
+      border-radius: 20px;
+      border: none;
+      background: transparent;
+      color: rgba(231,218,193,0.55);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-align: center;
+      cursor: pointer;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+      text-transform: uppercase;
+      display: block;
+    }
+    .month-btn:hover { background: rgba(200,161,90,0.18); color: var(--color-sand); }
+    .month-btn.active { background: var(--color-gold); color: var(--color-forest); font-weight: 700; }
+
+    /* Barra de busca */
+    .search-bar {
+      background: var(--color-moss);
+      padding: 0.5rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+    .search-input {
+      flex: 1;
+      background: rgba(231,218,193,0.12);
+      border: 1px solid rgba(231,218,193,0.25);
+      border-radius: 20px;
+      padding: 0.4rem 0.9rem;
+      color: var(--color-sand);
+      font-size: 0.83rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-input::placeholder { color: rgba(231,218,193,0.45); }
+    .search-input:focus { border-color: var(--color-gold); }
+    .search-count { font-size: 0.75rem; color: rgba(231,218,193,0.5); white-space: nowrap; }
+
+    .main-area { flex: 1; overflow-y: auto; padding: 1.5rem 1.5rem 2rem; min-width: 0; }
+
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;
+    }
+    .page-titulo { font-size: 1.1rem; font-weight: 700; color: var(--color-forest); }
+    .page-subtitulo { font-size: 0.8rem; color: rgba(30,42,31,0.5); margin-top: 0.1rem; }
+    .btn-novo {
+      background: var(--color-gold); color: var(--color-forest);
+      border: none; border-radius: 8px; width: 36px; height: 36px;
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: opacity 0.15s; flex-shrink: 0;
+    }
+    .btn-novo:hover { opacity: 0.85; }
+
+    /* Toast */
+    .messages { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+    .messages li { padding: 0.55rem 1rem; border-radius: 8px; font-size: 0.83rem; background: #f0eade; border-left: 3px solid var(--color-gold); }
+    .messages li.error   { border-left-color: #c0392b; background: #fdf0ee; color: #7b2318; }
+    .messages li.success { border-left-color: #27ae60; background: #edfbf3; color: #1a5c36; }
+
+    /* Form card (edição) */
+    .form-card { background: #fff; border: 1px solid var(--color-border); border-radius: 12px; padding: 1.25rem 1.25rem 1rem; margin-bottom: 1.5rem; }
+    .form-card h2 { font-size: 0.88rem; font-weight: 700; margin-bottom: 1rem; color: var(--color-moss); text-transform: uppercase; letter-spacing: 0.05em; }
+    .form-grid { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.25rem; flex: 1 1 150px; min-width: 0; }
+    .form-group.full { flex: 1 1 100%; }
+    .form-group label { font-size: 0.75rem; font-weight: 600; color: var(--color-earth); }
+    .form-group input, .form-group select {
+      padding: 0.5rem 0.7rem; border: 1px solid var(--color-border); border-radius: 7px;
+      font-size: 0.85rem; background: var(--color-light); color: var(--color-forest);
+      width: 100%; transition: border-color 0.15s; font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--color-gold); }
+    .form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.9rem; }
+    .btn-salvar { background: var(--color-moss); color: var(--color-sand); border: none; border-radius: 8px; padding: 0.5rem 1.1rem; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+    .btn-salvar:hover { opacity: 0.85; }
+    .btn-cancelar { background: transparent; color: var(--color-earth); border: 1px solid var(--color-border); border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.82rem; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+    .btn-cancelar:hover { background: var(--color-sand); }
+
+    /* Lista de atendimentos */
+    .atend-lista { display: flex; flex-direction: column; gap: 0.6rem; }
+    .atend-card {
+      background: #fff; border: 1px solid var(--color-border); border-radius: 12px;
+      padding: 0.85rem 1rem; display: flex; align-items: center; gap: 0.75rem;
+      transition: border-color 0.15s;
+    }
+    .atend-card:hover { border-color: var(--color-gold); }
+    .atend-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(200,161,90,0.18); display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 1rem; font-weight: 700; color: var(--color-earth); text-transform: uppercase;
+    }
+    .atend-info { flex: 1; min-width: 0; }
+    .atend-cliente { font-size: 0.95rem; font-weight: 700; color: var(--color-forest); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .atend-meta { font-size: 0.8rem; color: rgba(30,42,31,0.6); margin-top: 0.15rem; display: flex; flex-wrap: wrap; gap: 0.35rem 0.65rem; align-items: center; }
+    .atend-meta .val { color: var(--color-earth); font-weight: 700; }
+    .atend-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.4rem; }
+    .atend-tag { font-size: 0.68rem; font-weight: 600; background: rgba(47,59,46,0.07); color: var(--color-moss); border: 1px solid var(--color-border); border-radius: 20px; padding: 0.1rem 0.5rem; }
+    .atend-tag.custo { background: rgba(200,161,90,0.12); color: var(--color-earth); }
+    .atend-acoes { display: flex; gap: 0.35rem; flex-shrink: 0; }
+    .btn-icon { border: none; border-radius: 8px; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; transition: background 0.15s; }
+    .btn-icon-edit { background: rgba(200,161,90,0.15); color: var(--color-earth); }
+    .btn-icon-edit:hover { background: rgba(200,161,90,0.35); }
+    .btn-icon-del  { background: rgba(192,57,43,0.08); color: #c0392b; }
+    .btn-icon-del:hover { background: rgba(192,57,43,0.2); }
+    .list-empty { padding: 3rem; text-align: center; color: rgba(30,42,31,0.4); font-size: 0.88rem; background: #fff; border: 1px solid var(--color-border); border-radius: 12px; }
+
+    .no-est { text-align: center; padding: 3rem 1rem; color: rgba(30,42,31,0.5); }
+    .no-est a { color: var(--color-gold); text-decoration: none; font-weight: 600; }
+    .no-est strong { color: var(--color-forest); display: block; margin-bottom: 0.4rem; font-size: 1rem; }
+
+    /* Modal exclusão */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: #fff; border-radius: 14px; padding: 1.75rem 1.5rem 1.25rem; max-width: 380px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.18); }
+    .modal-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .modal-box p  { font-size: 0.85rem; color: rgba(30,42,31,0.65); margin-bottom: 1.25rem; }
+    .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+    .btn-danger { background: #c0392b; color: #fff; border: none; border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
+    .btn-danger:hover { opacity: 0.88; }
+
+    /* ── Wizard ── */
+    .wizard-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-end; justify-content: center; }
+    .wizard-overlay.open { display: flex; }
+    @media (min-width: 520px) { .wizard-overlay { align-items: center; } }
+    .wizard-box {
+      background: #fff; border-radius: 20px 20px 0 0; width: 100%; max-width: 480px;
+      padding: 1.25rem 1.5rem 1.75rem; box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
+      animation: slideUp 0.22s ease; display: flex; flex-direction: column; max-height: 92vh;
+    }
+    @media (min-width: 520px) { .wizard-box { border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.22); animation: none; max-height: 88vh; } }
+    @keyframes slideUp { from { transform: translateY(60px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .wizard-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; flex-shrink: 0; }
+    .wizard-title { font-size: 0.95rem; font-weight: 700; color: var(--color-forest); }
+    .wizard-close { border: none; background: none; cursor: pointer; color: rgba(30,42,31,0.4); padding: 0.25rem; border-radius: 6px; display: flex; align-items: center; transition: color 0.15s; }
+    .wizard-close:hover { color: var(--color-forest); }
+
+    .wizard-progress { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.1rem; flex-shrink: 0; }
+    .wizard-progress-track { flex: 1; height: 5px; border-radius: 5px; background: var(--color-border); overflow: hidden; }
+    .wizard-progress-fill { height: 100%; background: var(--color-gold); width: 0; transition: width 0.25s ease; }
+    .wizard-progress-text { font-size: 0.7rem; font-weight: 600; color: rgba(30,42,31,0.5); white-space: nowrap; }
+
+    .wizard-body { flex: 1; overflow-y: auto; min-height: 0; }
+    .wiz-question { font-size: 1.05rem; font-weight: 700; color: var(--color-forest); margin-bottom: 0.25rem; }
+    .wiz-hint { font-size: 0.78rem; color: rgba(30,42,31,0.5); margin-bottom: 1rem; }
+    .wiz-crumb { font-size: 0.72rem; font-weight: 700; color: var(--color-earth); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.3rem; }
+
+    .wizard-label { font-size: 0.72rem; font-weight: 700; color: var(--color-earth); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; display: block; }
+    .wizard-input {
+      width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid var(--color-border); border-radius: 10px;
+      font-size: 0.9rem; background: var(--color-light); color: var(--color-forest);
+      transition: border-color 0.15s; margin-bottom: 1rem; font-family: inherit;
+    }
+    .wizard-input:focus { outline: none; border-color: var(--color-gold); }
+    .wizard-input.big { font-size: 1.6rem; font-weight: 700; text-align: center; padding: 0.75rem; }
+    .field-row { display: flex; gap: 0.6rem; }
+    .field-row > div { flex: 1; }
+
+    /* Cliente: busca + lista */
+    .cli-lista { display: flex; flex-direction: column; gap: 0.4rem; max-height: 46vh; overflow-y: auto; margin-bottom: 0.5rem; }
+    .cli-item {
+      display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.75rem;
+      border: 1.5px solid var(--color-border); border-radius: 10px; background: var(--color-light);
+      cursor: pointer; transition: border-color 0.15s, background 0.15s; text-align: left; width: 100%;
+    }
+    .cli-item:hover { border-color: var(--color-gold); background: #fdf9f2; }
+    .cli-item.selected { border-color: var(--color-moss); background: rgba(47,59,46,0.07); box-shadow: 0 0 0 1.5px var(--color-moss); }
+    .cli-item .av { width: 30px; height: 30px; border-radius: 50%; background: rgba(200,161,90,0.18); color: var(--color-earth); font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; text-transform: uppercase; font-size: 0.85rem; }
+    .cli-item .nm { font-size: 0.9rem; font-weight: 600; color: var(--color-forest); }
+    .cli-novo {
+      display: none; align-items: center; gap: 0.55rem; padding: 0.65rem 0.8rem; width: 100%;
+      border: 1.5px dashed var(--color-gold); border-radius: 10px; background: rgba(200,161,90,0.08);
+      cursor: pointer; color: var(--color-earth); font-weight: 700; font-size: 0.88rem; text-align: left;
+    }
+    .cli-novo.show { display: flex; }
+    .cli-novo.selected { background: rgba(47,59,46,0.07); border-style: solid; border-color: var(--color-moss); box-shadow: 0 0 0 1.5px var(--color-moss); }
+
+    /* Cards de opção (características) */
+    .opt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 0.6rem; max-height: 50vh; overflow-y: auto; padding-right: 2px; }
+    .opt-card {
+      display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+      padding: 0.8rem 0.4rem 0.65rem; border: 1.5px solid var(--color-border); border-radius: 12px;
+      background: var(--color-light); cursor: pointer; transition: border-color 0.15s, background 0.15s;
+      text-align: center; position: relative;
+    }
+    .opt-card:hover { border-color: var(--color-gold); background: #fdf9f2; }
+    .opt-card.selected { border-color: var(--color-moss); background: rgba(47,59,46,0.07); box-shadow: 0 0 0 2px var(--color-moss); }
+    .opt-card-icon { font-size: 1.7rem; line-height: 1; display: flex; align-items: center; justify-content: center; height: 40px; }
+    .opt-card-icon img { width: 38px; height: 38px; object-fit: cover; border-radius: 8px; }
+    .opt-card-nome { font-size: 0.74rem; font-weight: 600; color: var(--color-forest); line-height: 1.2; }
+    .opt-card.has-children::after { content: '›'; position: absolute; top: 5px; right: 8px; font-size: 0.9rem; color: rgba(30,42,31,0.3); line-height: 1; }
+    .opt-check { position: absolute; top: 5px; left: 6px; width: 16px; height: 16px; border-radius: 50%; background: var(--color-moss); color: #fff; display: none; align-items: center; justify-content: center; font-size: 0.7rem; }
+    .opt-card.selected .opt-check { display: flex; }
+
+    /* Custo step */
+    .custo-head { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 1rem; }
+    .custo-head .ic { width: 44px; height: 44px; border-radius: 10px; background: rgba(200,161,90,0.15); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+    .custo-head .ic img { width: 32px; height: 32px; object-fit: cover; border-radius: 8px; }
+    .custo-head .nm { font-size: 1rem; font-weight: 700; color: var(--color-forest); }
+
+    /* Chips de sugestão de duração */
+    .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+    .chip { border: 1px solid var(--color-border); background: var(--color-light); color: var(--color-earth); border-radius: 20px; padding: 0.3rem 0.75rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .chip:hover { border-color: var(--color-gold); background: #fdf9f2; }
+    .chips-label { font-size: 0.72rem; color: rgba(30,42,31,0.5); margin-bottom: 0.35rem; }
+
+    .wizard-footer { display: flex; gap: 0.5rem; align-items: center; margin-top: 1rem; flex-shrink: 0; }
+    .wizard-footer .spacer { flex: 1; }
+    .btn-w-next { background: var(--color-moss); color: var(--color-sand); border: none; border-radius: 10px; padding: 0.65rem 1.4rem; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+    .btn-w-next:hover { opacity: 0.85; }
+    .btn-w-next:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-w-back { background: transparent; color: var(--color-earth); border: 1px solid var(--color-border); border-radius: 10px; padding: 0.65rem 1rem; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+    .btn-w-back:hover { background: var(--color-sand); }
+    .btn-w-skip { background: none; border: none; color: rgba(30,42,31,0.5); font-size: 0.82rem; font-weight: 600; cursor: pointer; text-decoration: underline; padding: 0.4rem; }
+    .btn-w-skip:hover { color: var(--color-earth); }
+
+    @media (max-width: 480px) {
+      .main-area { padding: 1rem 1rem 2rem; }
+      .atend-acoes { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  {% include 'core/_navbar.html' with navbar_title="Atendimentos" navbar_show_back=True navbar_back_named_url="gestao" %}
+
+  <div class="page-body">
+
+    <!-- Carrossel horizontal de meses -->
+    <div class="month-bar">
+      <button class="month-arrow" id="arrowPrev" title="Mês anterior">&#8249;</button>
+      <div class="month-track-wrap" id="trackWrap">
+        <div class="month-track" id="monthTrack">
+          {% for m in meses %}
+            <a class="month-btn {% if m.mes == mes_ativo and m.ano == ano_ativo %}active{% endif %}"
+               href="?mes={{ m.mes }}&ano={{ m.ano }}"
+               data-active="{% if m.mes == mes_ativo and m.ano == ano_ativo %}1{% else %}0{% endif %}">
+              {{ m.label }}
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+      <button class="month-arrow" id="arrowNext" title="Próximo mês">&#8250;</button>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" class="search-input" id="searchInput" placeholder="Buscar por cliente…" oninput="filtrarAtend()" autocomplete="off">
+      <span class="search-count" id="searchCount">{{ total_atendimentos }} atendimento{{ total_atendimentos|pluralize:"s" }}</span>
+    </div>
+
+    <div class="main-area">
+
+      {% if messages %}
+        <ul class="messages">
+          {% for msg in messages %}<li class="{{ msg.tags }}">{{ msg }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+
+      {% if not estabelecimento_ativo %}
+        <div class="no-est">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-gold);margin-bottom:.75rem">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <strong>Nenhum estabelecimento selecionado.</strong>
+          <p>Para registrar atendimentos, <a href="{% url 'perfil' %}">selecione um estabelecimento no perfil</a>.</p>
+        </div>
+      {% else %}
+
+        <div class="page-header">
+          <div>
+            <div class="page-titulo">{{ mes_label }}</div>
+            <div class="page-subtitulo">{{ total_atendimentos }} atendimento{{ total_atendimentos|pluralize:"s" }} registrado{{ total_atendimentos|pluralize:"s" }}</div>
+          </div>
+          <button class="btn-novo" onclick="abrirWizard()" title="Novo atendimento">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+
+        {% if editando %}
+          <div class="form-card">
+            <h2>Editar Atendimento</h2>
+            <form method="post" action="{% url 'atendimento_editar' editando.pk %}?mes={{ mes_ativo }}&ano={{ ano_ativo }}">
+              {% csrf_token %}
+              <input type="hidden" name="mes" value="{{ mes_ativo }}">
+              <input type="hidden" name="ano" value="{{ ano_ativo }}">
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label>Cliente</label>
+                  <select name="cliente_id">
+                    {% for cl in clientes %}
+                      <option value="{{ cl.pk }}" {% if cl.pk == editando.cliente_id %}selected{% endif %}>{{ cl.apelido }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Data *</label>
+                  <input type="date" name="data" value="{{ editando.data|date:'Y-m-d' }}" required>
+                </div>
+                <div class="form-group">
+                  <label>Hora *</label>
+                  <input type="time" name="hora" value="{{ editando.hora|time:'H:i' }}" required>
+                </div>
+                <div class="form-group">
+                  <label>Duração (hh:mm)</label>
+                  <input type="time" name="duracao" value="{{ editando.duracao_edit }}">
+                </div>
+                <div class="form-group">
+                  <label>Total recebido (R$)</label>
+                  <input type="text" id="editPagInput" name="pagamento_valor" value="{{ editando.total_pago }}" inputmode="numeric">
+                </div>
+              </div>
+              <div class="form-actions">
+                <a href="{% url 'atendimentos' %}?mes={{ mes_ativo }}&ano={{ ano_ativo }}" class="btn-cancelar">Cancelar</a>
+                <button type="submit" class="btn-salvar">Salvar alterações</button>
+              </div>
+            </form>
+          </div>
+        {% endif %}
+
+        {% if not atendimentos %}
+          <div class="list-empty">
+            Nenhum atendimento registrado ainda.<br>
+            <span style="font-size:0.8rem;opacity:0.7">Clique em + para registrar o primeiro.</span>
+          </div>
+        {% else %}
+          <div class="atend-lista" id="atendLista">
+            {% for at in atendimentos %}
+              <div class="atend-card" data-cliente="{{ at.cliente.apelido|lower }}">
+                <div class="atend-avatar">{{ at.cliente.apelido|first|upper }}</div>
+                <div class="atend-info">
+                  <div class="atend-cliente">{{ at.cliente.apelido }}</div>
+                  <div class="atend-meta">
+                    <span>{{ at.data|date:"d/m/y" }} {{ at.hora|time:"H:i" }}</span>
+                    {% if at.duracao_fmt %}<span>· {{ at.duracao_fmt }}</span>{% endif %}
+                    <span>· <span class="val">R$ {{ at.total_pago }}</span></span>
+                  </div>
+                  {% if at.caracteristica_nomes or at.custos_total %}
+                    <div class="atend-tags">
+                      {% for nome in at.caracteristica_nomes %}<span class="atend-tag">{{ nome }}</span>{% endfor %}
+                      {% if at.custos_total %}<span class="atend-tag custo">custos: R$ {{ at.custos_total }}</span>{% endif %}
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="atend-acoes">
+                  <a class="btn-icon btn-icon-edit" href="{% url 'atendimento_editar' at.pk %}?mes={{ mes_ativo }}&ano={{ ano_ativo }}" title="Editar">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </a>
+                  <button class="btn-icon btn-icon-del" onclick="abrirModal('{{ at.pk }}','{{ at.cliente.apelido|escapejs }}')" title="Excluir">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                  </button>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <div id="semResultados" style="display:none" class="list-empty">Nenhum atendimento encontrado para essa busca.</div>
+        {% endif %}
+
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Wizard dinâmico -->
+  <div class="wizard-overlay" id="wizardOverlay">
+    <div class="wizard-box">
+      <div class="wizard-header">
+        <span class="wizard-title">Novo Atendimento</span>
+        <button class="wizard-close" onclick="fecharWizard()" aria-label="Fechar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="wizard-progress">
+        <div class="wizard-progress-track"><div class="wizard-progress-fill" id="wizFill"></div></div>
+        <span class="wizard-progress-text" id="wizProgText"></span>
+      </div>
+      <div class="wizard-body" id="wizBody"></div>
+      <div class="wizard-footer" id="wizFooter"></div>
+    </div>
+  </div>
+
+  <!-- Modal exclusão -->
+  <div class="modal-overlay" id="modalExcluir">
+    <div class="modal-box">
+      <h3>Excluir atendimento</h3>
+      <p id="modalDesc">Tem certeza que deseja excluir este atendimento?</p>
+      <div class="modal-actions">
+        <button class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+        <form id="formExcluir" method="post">{% csrf_token %}<button type="submit" class="btn-danger">Excluir</button></form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ───────────── Máscara de moeda estilo banco ─────────────
+    // Dígitos entram pela direita; os centavos se deslocam automaticamente.
+    function initCurrency(el, onChange) {
+      el.type = 'text';
+      el.setAttribute('inputmode', 'numeric');
+      el.setAttribute('autocomplete', 'off');
+      let cents = 0;
+
+      function fmt(c) {
+        const s = String(c).padStart(3, '0');
+        const intPart = s.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return (intPart || '0') + ',' + s.slice(-2);
+      }
+
+      function fromStr(str) {
+        str = (str || '').trim();
+        if (!str) return 0;
+        if (str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
+        const parts = str.split('.');
+        const i = Math.abs(parseInt(parts[0], 10)) || 0;
+        const d = parseInt(((parts[1] || '') + '00').slice(0, 2), 10);
+        return i * 100 + d;
+      }
+
+      function sync() {
+        el.value = cents > 0 ? fmt(cents) : '';
+        if (onChange) onChange(cents > 0 ? (cents / 100).toFixed(2) : '');
+      }
+
+      cents = fromStr(el.value);
+      el.value = cents > 0 ? fmt(cents) : '';
+
+      el.addEventListener('keydown', function(e) {
+        if (e.key >= '0' && e.key <= '9') {
+          e.preventDefault();
+          const next = cents * 10 + parseInt(e.key, 10);
+          if (next <= 999999999) cents = next;
+          sync();
+        } else if (e.key === 'Backspace' || e.key === 'Delete') {
+          e.preventDefault();
+          cents = Math.floor(cents / 10);
+          sync();
+        } else if (!['Tab','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter'].includes(e.key)) {
+          e.preventDefault();
+        }
+      });
+
+      el.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const txt = (e.clipboardData || window.clipboardData).getData('text');
+        cents = fromStr(txt);
+        sync();
+      });
+
+      return {
+        get decimalValue() { return cents > 0 ? (cents / 100).toFixed(2) : ''; },
+        reset() { cents = 0; el.value = ''; if (onChange) onChange(''); }
+      };
+    }
+
+    // ───────────── Carrossel de meses ─────────────
+    (function() {
+      const track   = document.getElementById('monthTrack');
+      const wrap    = document.getElementById('trackWrap');
+      const btnPrev = document.getElementById('arrowPrev');
+      const btnNext = document.getElementById('arrowNext');
+      const active  = track ? track.querySelector('[data-active="1"]') : null;
+
+      function centerActive() {
+        if (!active || !wrap) return;
+        const itemLeft  = active.offsetLeft;
+        const itemWidth = active.offsetWidth;
+        const wrapWidth = wrap.clientWidth;
+        const target    = Math.max(0, itemLeft - wrapWidth / 2 + itemWidth / 2);
+        wrap.scrollLeft = target;
+      }
+      centerActive();
+
+      if (btnPrev) btnPrev.addEventListener('click', () => {
+        const prev = active ? active.previousElementSibling : null;
+        if (prev) prev.click();
+      });
+      if (btnNext) btnNext.addEventListener('click', () => {
+        const next = active ? active.nextElementSibling : null;
+        if (next) next.click();
+      });
+    })();
+
+    // ───────────── Dados do servidor ─────────────
+    const CLIENTES = [
+      {% for cl in clientes %}{ id:"{{ cl.pk }}", nome:"{{ cl.apelido|escapejs }}" }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ];
+    const CARACS = [
+      {% for c in caracteristicas %}{
+        id:"{{ c.pk }}", nome:"{{ c.nome|escapejs }}", pergunta:"{{ c.pergunta|escapejs }}", max:{{ c.numero_maximo_selecao }},
+        opcoes:[ {% for o in c.opcoes.all %}{ id:"{{ o.pk }}", nome:"{{ o.nome|escapejs }}", ilustracao:"{{ o.ilustracao|escapejs }}", pai:"{{ o.nivel_superior_id|default:'' }}" }{% if not forloop.last %},{% endif %}{% endfor %} ]
+      }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ];
+    const CUSTO_CATS = [
+      {% for cc in categorias_vinculadas %}{ id:"{{ cc.pk }}", nome:"{{ cc.nome|escapejs }}", ilustracao:"{{ cc.ilustracao|escapejs }}" }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ];
+    const DUR_SUGGEST = [
+      {% for d in duracoes_sugeridas %}{ valor:"{{ d.valor }}", label:"{{ d.label|escapejs }}" }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ];
+    const FORMAS_PAGAMENTO = [
+      {% for f in formas_pagamento %}{ id:"{{ f.pk }}", nome:"{{ f.nome|escapejs }}", padrao:{% if f.padrao %}true{% else %}false{% endif %} }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ];
+    const FORMA_PADRAO_ID = (FORMAS_PAGAMENTO.find(f => f.padrao) || FORMAS_PAGAMENTO[0] || {}).id || '';
+    const CRIAR_URL = "{% url 'atendimento_criar' %}";
+    const VERIFICAR_URL = "{% url 'atendimento_verificar' %}";
+    const HOJE = new Date().toISOString().slice(0, 10);
+    const CSRF = "{{ csrf_token }}";
+    const MES_ATIVO = "{{ mes_ativo }}";
+    const ANO_ATIVO = "{{ ano_ativo }}";
+
+    // ───────────── Estado ─────────────
+    let S = {};
+    function resetState() {
+      const now = new Date();
+      const pad = n => String(n).padStart(2,'0');
+      S = {
+        clienteId: '', novoCliente: '',
+        data: now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate()),
+        hora: pad(now.getHours())+':'+pad(now.getMinutes()),
+        pagamento: '', formaPagamentoId: FORMA_PADRAO_ID, duracao: '',
+        carac: {}, custo: {}
+      };
+      CARACS.forEach(c => S.carac[c.id] = new Set());
+    }
+
+    // ───────────── Construção do fluxo ─────────────
+    function childrenOf(carac, pai){ return carac.opcoes.filter(o => (o.pai||'') === (pai||'')); }
+    function hasChildren(carac, optId){ return carac.opcoes.some(o => (o.pai||'') === optId); }
+    function isSel(caracId, optId){ return S.carac[caracId] && S.carac[caracId].has(optId); }
+
+    function buildCaracPages(carac){
+      const pages = [];
+      (function walk(pai){
+        pages.push({ t:'carac', cid:carac.id, pai: pai||'' });
+        childrenOf(carac, pai).forEach(o => {
+          if (isSel(carac.id, o.id) && hasChildren(carac, o.id)) walk(o.id);
+        });
+      })('');
+      return pages;
+    }
+    function buildFlow(){
+      const f = [{t:'cliente'},{t:'datahora'},{t:'pagamento'},{t:'duracao'}];
+      CARACS.forEach(c => buildCaracPages(c).forEach(p => f.push(p)));
+      CUSTO_CATS.forEach(cc => f.push({ t:'custo', catId: cc.id }));
+      return f;
+    }
+
+    let flow = [];
+    let idx = 0;
+    const REQUIRED = new Set(['cliente','datahora','pagamento']);
+
+    // ───────────── Util ─────────────
+    function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function iconHTML(ilu){
+      if (!ilu) return '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:#b9ab8e"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+      if (ilu.startsWith('/') || ilu.startsWith('http')) return '<img src="'+esc(ilu)+'" alt="">';
+      return esc(ilu);
+    }
+    function caracById(id){ return CARACS.find(c => c.id === id); }
+    function custoCatById(id){ return CUSTO_CATS.find(c => c.id === id); }
+
+    // ───────────── Render ─────────────
+    function render(){
+      const page = flow[idx];
+      const body = document.getElementById('wizBody');
+      body.innerHTML = pageHTML(page);
+      wirePage(page);
+
+      // Progresso
+      const pct = flow.length ? Math.round((idx+1)/flow.length*100) : 0;
+      document.getElementById('wizFill').style.width = pct + '%';
+      document.getElementById('wizProgText').textContent = 'Etapa ' + (idx+1) + ' de ' + flow.length;
+
+      // Rodapé
+      const isLast = idx === flow.length - 1;
+      const optional = !REQUIRED.has(page.t);
+      let html = '';
+      html += '<button type="button" class="btn-w-back" id="wBack" '+(idx===0?'style="visibility:hidden"':'')+'>← Voltar</button>';
+      if (optional) html += '<button type="button" class="btn-w-skip" id="wSkip">Pular</button>';
+      html += '<span class="spacer"></span>';
+      html += '<button type="button" class="btn-w-next" id="wNext">'+(isLast?'Salvar atendimento':'Próximo →')+'</button>';
+      const footer = document.getElementById('wizFooter');
+      footer.innerHTML = html;
+      const back = document.getElementById('wBack'); if (back) back.onclick = voltar;
+      const skip = document.getElementById('wSkip'); if (skip) skip.onclick = pular;
+      document.getElementById('wNext').onclick = proximo;
+      atualizarNext();
+    }
+
+    function pageHTML(page){
+      if (page.t === 'cliente')   return htmlCliente();
+      if (page.t === 'datahora')  return htmlDataHora();
+      if (page.t === 'pagamento') return htmlPagamento();
+      if (page.t === 'duracao')   return htmlDuracao();
+      if (page.t === 'carac')     return htmlCarac(page);
+      if (page.t === 'custo')     return htmlCusto(page);
+      return '';
+    }
+
+    function htmlCliente(){
+      let lis = '';
+      CLIENTES.forEach(cl => {
+        lis += '<button type="button" class="cli-item" data-id="'+cl.id+'" data-nome="'+esc(cl.nome).toLowerCase()+'">'
+             + '<span class="av">'+esc((cl.nome||'?').charAt(0))+'</span><span class="nm">'+esc(cl.nome)+'</span></button>';
+      });
+      return '<div class="wiz-question">Quem é o cliente?</div>'
+           + '<div class="wiz-hint">Busque na lista ou cadastre um novo pelo apelido.</div>'
+           + '<input type="text" class="wizard-input" id="cliBusca" placeholder="Buscar ou novo apelido…" autocomplete="off" style="margin-bottom:0.6rem">'
+           + '<div class="cli-lista" id="cliLista">'+lis+'</div>'
+           + '<button type="button" class="cli-novo" id="cliNovo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span id="cliNovoTxt"></span></button>';
+    }
+
+    function htmlDataHora(){
+      return '<div class="wiz-question">Data e hora</div>'
+           + '<div class="wiz-hint">Já preenchemos com agora — ajuste se precisar.</div>'
+           + '<div class="field-row">'
+           + '<div><label class="wizard-label">Data *</label><input type="date" class="wizard-input" id="wData" value="'+S.data+'" max="'+HOJE+'"></div>'
+           + '<div><label class="wizard-label">Hora *</label><input type="time" class="wizard-input" id="wHora" value="'+S.hora+'"></div>'
+           + '</div>'
+           + '<div id="wizDataErro" style="color:#c0392b;font-size:0.82rem;margin-top:0.6rem;display:none"></div>';
+    }
+
+    function htmlPagamento(){
+      let formaHTML = '';
+      if (FORMAS_PAGAMENTO.length){
+        let opts = '';
+        FORMAS_PAGAMENTO.forEach(f => {
+          const sel = (f.id === S.formaPagamentoId) ? ' selected' : '';
+          opts += '<option value="'+f.id+'"'+sel+'>'+esc(f.nome)+'</option>';
+        });
+        formaHTML = '<label class="wizard-label">Forma de pagamento</label>'
+                  + '<select class="wizard-input" id="wForma">'+opts+'</select>';
+      }
+      return '<div class="wiz-question">Pagamento</div>'
+           + '<div class="wiz-hint">Total recebido pelo serviço.</div>'
+           + '<label class="wizard-label">Valor recebido (R$) *</label>'
+           + '<input type="text" inputmode="numeric" class="wizard-input big" id="wPag" value="'+esc(S.pagamento)+'" placeholder="0,00" autocomplete="off">'
+           + formaHTML;
+    }
+
+    function htmlDuracao(){
+      let chips = '';
+      if (DUR_SUGGEST.length){
+        chips = '<div class="chips-label">Sugestões de atendimentos anteriores:</div><div class="chips">';
+        DUR_SUGGEST.forEach(d => chips += '<button type="button" class="chip" data-val="'+d.valor+'">'+esc(d.label)+'</button>');
+        chips += '</div>';
+      }
+      return '<div class="wiz-question">Duração</div>'
+           + '<div class="wiz-hint">Opcional — pode pular.</div>'
+           + '<label class="wizard-label">Duração (hh:mm)</label>'
+           + '<input type="time" class="wizard-input" id="wDur" value="'+esc(S.duracao)+'">'
+           + chips;
+    }
+
+    function htmlCarac(page){
+      const carac = caracById(page.cid);
+      const opts = childrenOf(carac, page.pai);
+      let crumb = '';
+      if (page.pai){
+        const pai = carac.opcoes.find(o => o.id === page.pai);
+        crumb = '<div class="wiz-crumb">'+esc(carac.nome)+' › '+esc(pai ? pai.nome : '')+'</div>';
+      }
+      let cards = '';
+      opts.forEach(o => {
+        const sel = isSel(carac.id, o.id) ? ' selected' : '';
+        const hc = hasChildren(carac, o.id) ? ' has-children' : '';
+        cards += '<button type="button" class="opt-card'+sel+hc+'" data-opt="'+o.id+'">'
+               + '<span class="opt-check">✓</span>'
+               + '<span class="opt-card-icon">'+iconHTML(o.ilustracao)+'</span>'
+               + '<span class="opt-card-nome">'+esc(o.nome)+'</span></button>';
+      });
+      if (!opts.length) cards = '<div class="wiz-hint">Sem opções cadastradas para esta etapa.</div>';
+      const maxTxt = carac.max > 1 ? '<div class="wiz-hint">Selecione até '+carac.max+' opções · pode pular.</div>'
+                                   : '<div class="wiz-hint">Selecione uma opção · pode pular.</div>';
+      return crumb
+           + '<div class="wiz-question">'+esc(carac.pergunta || carac.nome)+'</div>'
+           + maxTxt
+           + '<div class="opt-grid">'+cards+'</div>';
+    }
+
+    function htmlCusto(page){
+      const cat = custoCatById(page.catId);
+      const v = S.custo[cat.id] || '';
+      return '<div class="wiz-question">Custo relacionado</div>'
+           + '<div class="wiz-hint">Opcional — informe o valor para vincular este custo ao atendimento, ou pule.</div>'
+           + '<div class="custo-head"><span class="ic">'+iconHTML(cat.ilustracao)+'</span><span class="nm">'+esc(cat.nome)+'</span></div>'
+           + '<label class="wizard-label">Valor (R$)</label>'
+           + '<input type="text" inputmode="numeric" class="wizard-input big" id="wCusto" value="'+esc(v)+'" placeholder="0,00" autocomplete="off">';
+    }
+
+    // ───────────── Eventos por página ─────────────
+    function wirePage(page){
+      if (page.t === 'cliente'){
+        const busca = document.getElementById('cliBusca');
+        const novoBtn = document.getElementById('cliNovo');
+        document.querySelectorAll('#cliLista .cli-item').forEach(it => {
+          if (it.dataset.id === S.clienteId) it.classList.add('selected');
+          it.onclick = () => {
+            S.clienteId = it.dataset.id; S.novoCliente = '';
+            document.querySelectorAll('#cliLista .cli-item').forEach(x => x.classList.remove('selected'));
+            novoBtn.classList.remove('selected');
+            it.classList.add('selected');
+            atualizarNext();
+          };
+        });
+        novoBtn.onclick = () => {
+          const txt = busca.value.trim(); if (!txt) return;
+          S.novoCliente = txt; S.clienteId = '';
+          document.querySelectorAll('#cliLista .cli-item').forEach(x => x.classList.remove('selected'));
+          novoBtn.classList.add('selected');
+          atualizarNext();
+        };
+        busca.oninput = () => {
+          const q = busca.value.trim().toLowerCase();
+          let exact = false, visiveis = 0;
+          document.querySelectorAll('#cliLista .cli-item').forEach(it => {
+            const nm = it.dataset.nome || '';
+            const show = !q || nm.includes(q);
+            it.style.display = show ? '' : 'none';
+            if (show) visiveis++;
+            if (nm === q) exact = true;
+          });
+          // Se digitou algo e não existe igual, oferece criar
+          if (q && !exact){
+            novoBtn.classList.add('show');
+            document.getElementById('cliNovoTxt').textContent = 'Criar novo cliente: "' + busca.value.trim() + '"';
+          } else {
+            novoBtn.classList.remove('show','selected');
+            if (S.novoCliente){ S.novoCliente = ''; atualizarNext(); }
+          }
+        };
+        if (S.novoCliente){ novoBtn.classList.add('show','selected'); document.getElementById('cliNovoTxt').textContent = 'Criar novo cliente: "'+S.novoCliente+'"'; busca.value = S.novoCliente; }
+      }
+      else if (page.t === 'datahora'){
+        document.getElementById('wData').oninput = e => {
+          S.data = e.target.value;
+          const erroEl = document.getElementById('wizDataErro');
+          if (S.data && S.data > HOJE) {
+            erroEl.textContent = 'Não é possível registrar atendimentos com data futura.';
+            erroEl.style.display = '';
+          } else {
+            erroEl.textContent = '';
+            erroEl.style.display = 'none';
+          }
+          atualizarNext();
+        };
+        document.getElementById('wHora').oninput = e => { S.hora = e.target.value; atualizarNext(); };
+      }
+      else if (page.t === 'pagamento'){
+        const el = document.getElementById('wPag');
+        const pagCtrl = initCurrency(el, function(v) { S.pagamento = v; atualizarNext(); });
+        S.pagamento = pagCtrl.decimalValue; // sincroniza ao voltar para esta etapa
+        atualizarNext();
+        const fp = document.getElementById('wForma');
+        if (fp) fp.onchange = e => { S.formaPagamentoId = e.target.value; };
+        setTimeout(() => el.focus(), 80);
+      }
+      else if (page.t === 'duracao'){
+        const el = document.getElementById('wDur');
+        el.oninput = e => { S.duracao = e.target.value; };
+        document.querySelectorAll('.chip').forEach(ch => ch.onclick = () => { S.duracao = ch.dataset.val; el.value = ch.dataset.val; });
+      }
+      else if (page.t === 'carac'){
+        const carac = caracById(page.cid);
+        document.querySelectorAll('.opt-card').forEach(card => {
+          card.onclick = () => {
+            const oid = card.dataset.opt;
+            const set = S.carac[carac.id];
+            if (set.has(oid)){
+              set.delete(oid);
+              limparDescendentes(carac, oid);
+            } else {
+              if (carac.max === 1){
+                childrenOf(carac, page.pai).forEach(o => { if (set.has(o.id)){ set.delete(o.id); limparDescendentes(carac, o.id); } });
+                set.add(oid);
+              } else {
+                const noNivel = childrenOf(carac, page.pai).filter(o => set.has(o.id)).length;
+                if (noNivel >= carac.max) return;
+                set.add(oid);
+              }
+            }
+            flow = buildFlow();
+            render();
+          };
+        });
+      }
+      else if (page.t === 'custo'){
+        const el = document.getElementById('wCusto');
+        const cat = custoCatById(page.catId);
+        const custoCtrl = initCurrency(el, function(v) { S.custo[cat.id] = v; });
+        S.custo[cat.id] = custoCtrl.decimalValue;
+      }
+    }
+
+    function limparDescendentes(carac, optId){
+      childrenOf(carac, optId).forEach(o => {
+        if (S.carac[carac.id].has(o.id)) S.carac[carac.id].delete(o.id);
+        limparDescendentes(carac, o.id);
+      });
+    }
+
+    // ───────────── Validação / navegação ─────────────
+    function pageValida(page){
+      if (page.t === 'cliente')   return !!(S.clienteId || S.novoCliente);
+      if (page.t === 'datahora')  return !!(S.data && S.hora) && S.data <= HOJE;
+      if (page.t === 'pagamento') return S.pagamento !== '' && parseFloat(S.pagamento) >= 0 && !isNaN(parseFloat(S.pagamento));
+      return true;
+    }
+    function atualizarNext(){
+      const page = flow[idx];
+      const next = document.getElementById('wNext');
+      if (!next) return;
+      next.disabled = REQUIRED.has(page.t) && !pageValida(page);
+    }
+    async function proximo(){
+      const page = flow[idx];
+      if (REQUIRED.has(page.t) && !pageValida(page)) return;
+      if (page.t === 'datahora' && S.clienteId) {
+        const erroEl = document.getElementById('wizDataErro');
+        try {
+          const r = await fetch(VERIFICAR_URL + '?cliente_id=' + encodeURIComponent(S.clienteId) + '&data=' + encodeURIComponent(S.data));
+          const json = await r.json();
+          if (json.duplicata) {
+            erroEl.textContent = 'Este cliente já possui um atendimento registrado nesta data.';
+            erroEl.style.display = '';
+            return;
+          } else {
+            erroEl.textContent = '';
+            erroEl.style.display = 'none';
+          }
+        } catch(_) { /* falha silenciosa: servidor valida de qualquer forma */ }
+      }
+      if (idx === flow.length - 1){ submitWizard(); return; }
+      idx++; render();
+    }
+    function voltar(){ if (idx > 0){ idx--; render(); } }
+    function pular(){
+      const page = flow[idx];
+      if (page.t === 'duracao') { S.duracao = ''; }
+      if (page.t === 'custo')   { S.custo[page.catId] = ''; }
+      if (idx === flow.length - 1){ submitWizard(); return; }
+      idx++; render();
+    }
+
+    // ───────────── Submit ─────────────
+    function submitWizard(){
+      const form = document.createElement('form');
+      form.method = 'post'; form.action = CRIAR_URL; form.style.display = 'none';
+      const add = (n,v) => { const i = document.createElement('input'); i.type='hidden'; i.name=n; i.value=v; form.appendChild(i); };
+      add('csrfmiddlewaretoken', CSRF);
+      add('mes', MES_ATIVO);
+      add('ano', ANO_ATIVO);
+      if (S.clienteId) add('cliente_id', S.clienteId); else add('novo_cliente', S.novoCliente);
+      add('data', S.data); add('hora', S.hora);
+      add('pagamento_valor', S.pagamento);
+      if (S.formaPagamentoId) add('forma_pagamento_id', S.formaPagamentoId);
+      add('duracao', S.duracao || '');
+      Object.keys(S.carac).forEach(cid => {
+        const carac = caracById(cid);
+        S.carac[cid].forEach(oid => {
+          // Envia apenas opções folha: aquelas sem nenhum filho selecionado
+          const temFilhoSelecionado = childrenOf(carac, oid).some(child => S.carac[cid].has(child.id));
+          if (!temFilhoSelecionado) add('opcoes', oid);
+        });
+      });
+      Object.keys(S.custo).forEach(catId => { const v = S.custo[catId]; if (v && parseFloat(v) > 0) add('custo_'+catId, v); });
+      document.body.appendChild(form);
+      form.submit();
+    }
+
+    // ───────────── Abrir / fechar ─────────────
+    function abrirWizard(){
+      resetState();
+      flow = buildFlow();
+      idx = 0;
+      document.getElementById('wizardOverlay').classList.add('open');
+      render();
+    }
+    function fecharWizard(){ document.getElementById('wizardOverlay').classList.remove('open'); }
+    document.getElementById('wizardOverlay').addEventListener('click', function(e){ if (e.target === this) fecharWizard(); });
+
+    // ───────────── Modal exclusão ─────────────
+    function abrirModal(pk, nome){
+      document.getElementById('modalDesc').textContent = 'Tem certeza que deseja excluir o atendimento de "'+nome+'"? Esta ação não pode ser desfeita.';
+      document.getElementById('formExcluir').action = '/atendimentos/'+pk+'/excluir/?mes='+MES_ATIVO+'&ano='+ANO_ATIVO;
+      document.getElementById('modalExcluir').classList.add('open');
+    }
+    function fecharModal(){ document.getElementById('modalExcluir').classList.remove('open'); }
+    document.getElementById('modalExcluir').addEventListener('click', function(e){ if (e.target === this) fecharModal(); });
+
+    // ───────────── Busca na lista ─────────────
+    const totalAtend = {{ total_atendimentos }};
+    function filtrarAtend(){
+      const q = document.getElementById('searchInput').value.toLowerCase().trim();
+      const cards = document.querySelectorAll('#atendLista .atend-card');
+      let vis = 0;
+      cards.forEach(c => { const m = !q || (c.dataset.cliente||'').includes(q); c.style.display = m ? '' : 'none'; if (m) vis++; });
+      const semRes = document.getElementById('semResultados'); if (semRes) semRes.style.display = (q && vis === 0) ? 'block' : 'none';
+      const cnt = document.getElementById('searchCount'); if (cnt) cnt.textContent = q ? (vis + ' resultado' + (vis!==1?'s':'')) : (totalAtend + ' atendimento' + (totalAtend!==1?'s':''));
+    }
+
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ fecharWizard(); fecharModal(); } });
+
+    // ───────────── Máscara de valor — form de edição ─────────────
+    (function() {
+      const el = document.getElementById('editPagInput');
+      if (!el) return;
+      const ctrl = initCurrency(el);
+      el.closest('form').addEventListener('submit', function() {
+        el.value = ctrl.decimalValue;
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,330 @@
+{% extends 'core/consultor_base.html' %}
+
+{% block title %}Relatório de Atendimentos — Consultor{% endblock %}
+{% block nav_relatorio_atendimentos %}class="active"{% endblock %}
+
+{% block extra_styles %}
+
+  .filter-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(30,42,31,0.08);
+    padding: 1.1rem 1.4rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .filter-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #888;
+  }
+  .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .filter-select {
+    padding: 0.42rem 0.75rem;
+    border: 1px solid #d9cdb8;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--color-forest);
+    background: #faf8f4;
+    font-family: inherit;
+    cursor: pointer;
+    appearance: auto;
+  }
+  .filter-select:focus { outline: none; border-color: var(--color-gold); }
+  .filter-sep {
+    font-size: 0.8rem;
+    color: #aaa;
+    font-weight: 600;
+  }
+  .filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+
+  .kpi-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .kpi-pill {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(30,42,31,0.08);
+    padding: 0.75rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 160px;
+  }
+  .kpi-pill.accent { border-top: 3px solid var(--color-terracota); }
+  .kpi-pill.gold   { border-top: 3px solid var(--color-gold); }
+  .kpi-pill-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #999;
+  }
+  .kpi-pill-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--color-forest);
+    line-height: 1.1;
+  }
+  .kpi-pill-value .cur { font-size: 0.85rem; font-weight: 700; opacity: 0.6; margin-right: 0.1rem; }
+
+  .result-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(30,42,31,0.08);
+    overflow: hidden;
+  }
+  .result-card-header {
+    padding: 0.9rem 1.4rem;
+    border-bottom: 1px solid #f0ebe0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .result-card-header h3 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-forest);
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .period-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-earth);
+    background: rgba(200,161,90,0.15);
+    border-radius: 6px;
+    padding: 0.18rem 0.6rem;
+  }
+  .btn-csv {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.38rem 0.85rem;
+    border-radius: 7px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: transparent;
+    color: var(--color-moss);
+    border: 1px solid #ccc;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s;
+    font-family: inherit;
+  }
+  .btn-csv:hover { background: #f5f0e8; border-color: var(--color-gold); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  thead th {
+    background: #f5f0e8;
+    color: #888;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 0.65rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e8dfc8;
+  }
+  thead th.right { text-align: right; }
+  tbody tr { border-bottom: 1px solid #f0ebe0; transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #faf8f4; }
+  tbody td { padding: 0.7rem 1rem; vertical-align: middle; }
+  tbody td.right { text-align: right; font-variant-numeric: tabular-nums; }
+  tfoot tr { background: #f5f0e8; font-weight: 700; }
+  tfoot td { padding: 0.75rem 1rem; font-size: 0.875rem; }
+  tfoot td.right { text-align: right; }
+
+  .tag-hora {
+    font-size: 0.78rem;
+    color: #aaa;
+    margin-left: 0.3rem;
+  }
+  .tag-forma {
+    display: inline-block;
+    font-size: 0.72rem;
+    background: rgba(200,161,90,0.12);
+    color: var(--color-earth);
+    border-radius: 5px;
+    padding: 0.1rem 0.45rem;
+    font-weight: 600;
+  }
+
+{% endblock %}
+
+{% block content %}
+
+  <div class="page-title">Relatório de Atendimentos</div>
+  <p class="page-subtitle">
+    {% if estabelecimento_ativo %}
+      {{ estabelecimento_ativo.nome }}
+    {% else %}
+      Selecione um estabelecimento para visualizar o relatório
+    {% endif %}
+  </p>
+
+  {% if not estabelecimento_ativo %}
+
+    <div class="card" style="text-align:center;padding:3rem 2rem;">
+      <div style="font-size:2.5rem;margin-bottom:.75rem;">🏢</div>
+      <strong style="font-size:1rem;color:var(--color-forest);display:block;margin-bottom:.35rem;">Nenhum estabelecimento selecionado</strong>
+      <p style="font-size:.875rem;color:#888;">Selecione um estabelecimento no menu acima.</p>
+    </div>
+
+  {% else %}
+
+    <!-- Filtros -->
+    <form method="get" class="filter-card">
+      <div class="filter-group">
+        <span class="filter-label">Período inicial</span>
+        <div class="filter-row">
+          <select name="mes_ini" class="filter-select">
+            {% for num, nome in meses %}
+              <option value="{{ num }}" {% if num == mes_ini %}selected{% endif %}>{{ nome }}</option>
+            {% endfor %}
+          </select>
+          <select name="ano_ini" class="filter-select">
+            {% for a in anos_disponiveis %}
+              <option value="{{ a }}" {% if a == ano_ini %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <span class="filter-sep" style="margin-bottom:.45rem;">até</span>
+
+      <div class="filter-group">
+        <span class="filter-label">Período final</span>
+        <div class="filter-row">
+          <select name="mes_fim" class="filter-select">
+            {% for num, nome in meses %}
+              <option value="{{ num }}" {% if num == mes_fim %}selected{% endif %}>{{ nome }}</option>
+            {% endfor %}
+          </select>
+          <select name="ano_fim" class="filter-select">
+            {% for a in anos_disponiveis %}
+              <option value="{{ a }}" {% if a == ano_fim %}selected{% endif %}>{{ a }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <button type="submit" class="btn btn-secondary">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Filtrar
+        </button>
+        <a href="{% url 'consultor_relatorio_atendimentos' %}?mes_ini=1&ano_ini={{ ano_ini }}&mes_fim={{ data_fim.month }}&ano_fim={{ data_fim.year }}"
+           class="btn btn-ghost" style="font-size:.78rem;">Limpar</a>
+      </div>
+    </form>
+
+    <!-- KPIs do período -->
+    <div class="kpi-row">
+      <div class="kpi-pill accent">
+        <span class="kpi-pill-label">Atendimentos</span>
+        <span class="kpi-pill-value">{{ total_atendimentos }}</span>
+      </div>
+      <div class="kpi-pill gold">
+        <span class="kpi-pill-label">Faturado no período</span>
+        <span class="kpi-pill-value"><span class="cur">R$</span>{{ total_faturado }}</span>
+      </div>
+    </div>
+
+    <!-- Tabela de atendimentos -->
+    <div class="result-card">
+      <div class="result-card-header">
+        <h3>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Atendimentos
+          <span class="period-badge">{{ data_ini|date:"d/m/Y" }} – {{ data_fim|date:"d/m/Y" }}</span>
+        </h3>
+        <a href="{% url 'consultor_exportar_csv_atendimentos' %}?mes_ini={{ mes_ini }}&ano_ini={{ ano_ini }}&mes_fim={{ mes_fim }}&ano_fim={{ ano_fim }}&estabelecimento_id={{ estabelecimento_ativo.pk }}"
+           class="btn-csv">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar CSV
+        </a>
+      </div>
+
+      {% if atendimentos %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Duração</th>
+                <th class="right">Valor</th>
+                <th>Forma de Pagamento</th>
+                {% for car in caracteristicas_list %}
+                <th>{{ car.nome }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for at in atendimentos %}
+              <tr>
+                <td>
+                  {{ at.data|date:"d/m/Y" }}
+                  <span class="tag-hora">{{ at.hora|time:"H:i" }}</span>
+                </td>
+                <td>{{ at.cliente }}</td>
+                <td>{{ at.duracao }}</td>
+                <td class="right">{% if at.valor != '—' %}R$ {{ at.valor }}{% else %}—{% endif %}</td>
+                <td>
+                  {% if at.formas_pagamento != '—' %}
+                    <span class="tag-forma">{{ at.formas_pagamento }}</span>
+                  {% else %}
+                    <span style="color:#ccc;">—</span>
+                  {% endif %}
+                </td>
+                {% for val in at.caracteristicas_vals %}
+                <td>{{ val }}</td>
+                {% endfor %}
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3"><strong>Total ({{ total_atendimentos }} atendimentos)</strong></td>
+                <td class="right">R$ {{ total_faturado }}</td>
+                <td{% if caracteristicas_list %} colspan="{{ caracteristicas_list|length|add:1 }}"{% endif %}></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <strong>Nenhum atendimento encontrado</strong>
+          <p>Não há atendimentos registrados no período de {{ data_ini|date:"d/m/Y" }} a {{ data_fim|date:"d/m/Y" }}.</p>
+        </div>
+      {% endif %}
+    </div>
+
+  {% endif %}
+
+{% endblock %}

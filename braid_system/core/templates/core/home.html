@@ -1,0 +1,295 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Braid System</title>
+  <style>
+    :root {
+      --color-moss:      #2F3B2E;
+      --color-forest:    #1E2A1F;
+      --color-terracota: #8C4A2F;
+      --color-earth:     #5A3A20;
+      --color-gold:      #C8A15A;
+      --color-sand:      #E7DAC1;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--color-sand);
+      color: var(--color-forest);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--color-moss);
+      color: var(--color-sand);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    header .logo-icon {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Hero ── */
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.25rem;
+    }
+    .hero {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(30,42,31,0.10);
+      padding: 3rem 2.5rem;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .hero-logo {
+      width: 110px;
+      height: 110px;
+      object-fit: contain;
+      border-radius: 20px;
+    }
+    .hero h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--color-forest);
+      line-height: 1.25;
+    }
+    .hero p {
+      font-size: 0.95rem;
+      color: var(--color-earth);
+      line-height: 1.6;
+    }
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: rgba(0,0,0,0.09);
+    }
+
+    /* ── Botão Google ── */
+    .btn-google {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      width: 100%;
+      padding: 0.8rem 1.25rem;
+      border: 1.5px solid rgba(0,0,0,0.15);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--color-forest);
+      font-size: 0.975rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+    .btn-google:hover {
+      background: var(--color-sand);
+      border-color: var(--color-gold);
+      box-shadow: 0 2px 8px rgba(140,74,47,0.10);
+    }
+    .btn-google:active {
+      background: #ede3d0;
+    }
+    .google-logo {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    /* ── Mensagens (erros de login etc.) ── */
+    .messages {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      list-style: none;
+    }
+    .messages li {
+      padding: 0.7rem 0.9rem;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      text-align: left;
+    }
+    .messages li.error {
+      background: #f9e3dc;
+      color: #8C4A2F;
+      border: 1px solid rgba(140,74,47,0.35);
+    }
+    .messages li.success {
+      background: #e3ecdc;
+      color: #2F3B2E;
+      border: 1px solid rgba(47,59,46,0.30);
+    }
+
+    /* ── Separador ── */
+    .separator {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      width: 100%;
+      color: #aaa;
+      font-size: 0.8rem;
+    }
+    .separator::before,
+    .separator::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(0,0,0,0.10);
+    }
+
+    /* ── Formulário de login ── */
+    .login-form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.875rem;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      text-align: left;
+    }
+    .form-group label {
+      font-size: 0.825rem;
+      font-weight: 600;
+      color: var(--color-earth);
+    }
+    .form-group input {
+      width: 100%;
+      padding: 0.7rem 0.9rem;
+      border: 1.5px solid rgba(0,0,0,0.15);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      color: var(--color-forest);
+      background: #faf9f7;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-group input:focus {
+      border-color: var(--color-gold);
+      box-shadow: 0 0 0 3px rgba(200,161,90,0.15);
+      background: #fff;
+    }
+    .btn-login {
+      width: 100%;
+      padding: 0.8rem 1.25rem;
+      border: none;
+      border-radius: 10px;
+      background: var(--color-moss);
+      color: var(--color-sand);
+      font-size: 0.975rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+      margin-top: 0.25rem;
+    }
+    .btn-login:hover {
+      background: var(--color-forest);
+      box-shadow: 0 2px 8px rgba(30,42,31,0.18);
+    }
+    .btn-login:active {
+      background: var(--color-earth);
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 1.25rem;
+      font-size: 0.8rem;
+      color: var(--color-earth);
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img class="logo-icon" src="{% static 'core/img/logo.png' %}" alt="Braid System logo" />
+    <h1>Braid System</h1>
+  </header>
+
+  <main>
+    <div class="hero">
+      <img class="hero-logo" src="{% static 'core/img/logo.png' %}" alt="Braid System logo" />
+
+      <div>
+        <h2>Bem-vinda ao Braid System</h2>
+        <p>Plataforma de gestão para trancistas.<br>Faça login para continuar.</p>
+      </div>
+
+      {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+        <li class="{{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <div class="divider"></div>
+	  
+	  <!-- Formulário usuário/senha -->
+      <form method="post" action="/login/" class="login-form">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="username">Usuário</label>
+          <input type="text" id="username" name="username" placeholder="Digite seu usuário" autocomplete="username" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password" id="password" name="password" placeholder="Digite sua senha" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn-login">Entrar</button>
+      </form>
+
+      <div class="separator">ou</div>  
+
+      <!-- Botão de login com Google (OAuth2 / OpenID Connect) -->
+      <a href="{% url 'google_login' %}" class="btn-google">
+        <!-- Logo Google SVG oficial -->
+        <svg class="google-logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          <path fill="none" d="M0 0h48v48H0z"/>
+        </svg>
+        Entrar com Google
+      </a>
+
+      
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026 Braid System — Todos os direitos reservados
+  </footer>
+
+</body>
+</html>

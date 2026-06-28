@@ -1,0 +1,345 @@
+{% extends 'core/admin_base.html' %}
+
+{% block title %}Opções — {{ caracteristica.nome }}{% endblock %}
+
+{% block nav_caracteristicas %}class="active"{% endblock %}
+
+{% block extra_styles %}
+  .card-plain { padding:1.5rem 2rem; margin-bottom:2rem; border-radius:12px; background:#fff; box-shadow:0 2px 10px rgba(30,42,31,0.08); }
+  .card-title { font-size:1rem; font-weight:700; color:var(--color-forest); margin-bottom:1.25rem; display:flex; align-items:center; gap:0.5rem; }
+
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem 1.5rem; }
+  .form-group.flex { display:flex; flex-direction:column; gap:0.35rem; }
+  .form-group.flex label { font-size:0.8rem; font-weight:600; color:#555; letter-spacing:0.04em; text-transform:uppercase; }
+  .form-group.flex input[type="text"],
+  .form-group.flex select {
+    padding:0.6rem 0.85rem; border:1.5px solid #ddd; border-radius:8px;
+    font-size:0.9rem; color:var(--color-forest); transition:border-color 0.15s;
+    font-family:inherit; background:#fff;
+  }
+  .form-group.flex input:focus,
+  .form-group.flex select:focus { outline:none; border-color:var(--color-gold); }
+  .form-group.flex .hint { font-size:0.75rem; color:#999; }
+
+  /* ── Info strip ── */
+  .info-strip {
+    display:flex; align-items:center; gap:1rem; flex-wrap:wrap;
+    background:#fff; border-radius:10px;
+    border-left:4px solid var(--color-gold);
+    padding:0.85rem 1.25rem; margin-bottom:1.75rem;
+    box-shadow:0 1px 6px rgba(30,42,31,0.06);
+  }
+  .info-strip .info-item { font-size:0.82rem; color:#555; }
+  .info-strip .info-item strong { color:var(--color-forest); }
+  .info-strip .tag-sensivel {
+    display:inline-flex; align-items:center; gap:0.3rem;
+    font-size:0.72rem; font-weight:600;
+    background:#fff3cd; color:#856404;
+    border:1px solid #ffc107; border-radius:20px; padding:0.15rem 0.55rem;
+  }
+
+  /* ── Tabela ── */
+  .table-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+  .table-header h3 { font-size:1rem; font-weight:700; color:var(--color-forest); }
+  .badge-count { background:var(--color-gold); color:var(--color-forest); border-radius:20px; padding:0.15rem 0.6rem; font-size:0.75rem; font-weight:700; }
+
+  tbody tr:hover { background:rgba(200,161,90,0.06); }
+  tbody td.actions { display:flex; gap:0.4rem; align-items:center; }
+
+  .opcao-raiz { font-weight:600; }
+  .opcao-sub  { color:#666; padding-left:1.25rem; }
+  .opcao-sub::before { content:"└ "; color:#ccc; }
+
+  .tag-sub {
+    font-size:0.7rem; font-weight:600;
+    background:#e8f4f8; color:#2980b9;
+    border-radius:20px; padding:0.1rem 0.5rem;
+    border:1px solid #bee3f8;
+  }
+
+  .ilustracao-preview { font-size:1.3rem; min-width:28px; text-align:center; }
+  .ilustracao-preview img { height:32px; width:32px; object-fit:cover; border-radius:6px; border:1px solid #ddd; vertical-align:middle; }
+
+  /* ── Drop zone ── */
+  .drop-zone {
+    border:2px dashed #ddd; border-radius:10px; padding:1rem;
+    text-align:center; cursor:pointer; transition:border-color 0.2s, background 0.2s;
+    background:#fafafa; position:relative;
+  }
+  .drop-zone.dragover { border-color:var(--color-gold); background:#fffbf0; }
+  .drop-zone input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; }
+  .drop-zone .drop-label { font-size:0.82rem; color:#999; pointer-events:none; }
+  .drop-zone .drop-label strong { color:var(--color-forest); }
+  .drop-preview { margin-top:0.5rem; display:flex; align-items:center; gap:0.5rem; }
+  .drop-preview img { height:40px; width:40px; object-fit:cover; border-radius:6px; border:1px solid #ddd; }
+  .drop-preview span { font-size:0.78rem; color:#666; }
+
+  .empty-state { text-align:center; color:#bbb; padding:2.5rem 1rem; }
+  .empty-state .ph-icon { font-size:2.5rem; margin-bottom:0.75rem; }
+  .empty-state p { font-size:0.9rem; }
+{% endblock %}
+
+{% block content %}
+  <nav class="breadcrumb">
+    <a href="{% url 'admin_painel' %}">Admin</a>
+    <span class="sep">›</span>
+    <a href="{% url 'caracteristicas_atendimento' %}">Características de Atendimento</a>
+    <span class="sep">›</span>
+    <span>{{ caracteristica.nome }}</span>
+  </nav>
+
+  <h2 class="page-title">Opções — {{ caracteristica.nome }}</h2>
+  <p class="page-subtitle">Gerencie as opções e sub-opções desta característica</p>
+
+  <div class="info-strip">
+    <div class="info-item"><strong>Pergunta:</strong> {{ caracteristica.pergunta }}</div>
+    <div class="info-item"><strong>Máx. seleções:</strong> {{ caracteristica.numero_maximo_selecao }}</div>
+    {% if caracteristica.contem_dado_sensivel %}
+      <span class="tag-sensivel">⚠️ Dado sensível (LGPD)</span>
+    {% endif %}
+  </div>
+
+  {% if messages %}
+    <ul class="messages">
+      {% for msg in messages %}
+        <li class="{{ msg.tags }}">{{ msg }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <!-- Formulário criar / editar opção -->
+  <div class="card-plain">
+    <p class="card-title">
+      {% if editando %}✏️ Editar Opção{% else %}➕ Nova Opção{% endif %}
+    </p>
+
+    <form method="post" enctype="multipart/form-data"
+      action="{% if editando %}{% url 'opcao_caracteristica_editar' caracteristica.pk editando.pk %}{% else %}{% url 'opcao_caracteristica_criar' caracteristica.pk %}{% endif %}">
+      {% csrf_token %}
+
+      <div class="form-grid">
+
+        <div class="form-group flex">
+          <label for="nome">Nome da opção</label>
+          <input type="text" id="nome" name="nome" required maxlength="255"
+                 value="{{ editando.nome|default:'' }}"
+                 placeholder="Ex: Liso, Cacheado, Ondulado">
+        </div>
+
+        <div class="form-group flex">
+          <label for="ilustracao_arquivo">Ilustração</label>
+
+          <div class="drop-zone" id="drop-zone">
+            <input type="file" id="ilustracao_arquivo" name="ilustracao_arquivo" accept="image/*">
+            <div class="drop-label">
+              <strong>Arraste uma imagem aqui</strong> ou clique para selecionar
+            </div>
+          </div>
+
+          <div class="drop-preview" id="drop-preview" style="display:none;">
+            <img id="drop-img" src="" alt="Pré-visualização">
+            <span id="drop-filename"></span>
+          </div>
+
+          {% if editando.ilustracao %}
+            <div style="margin-top:0.4rem;display:flex;align-items:center;gap:0.5rem;">
+              {% if editando.ilustracao|slice:":4" == "http" or editando.ilustracao|slice:":1" == "/" %}
+                <img src="{{ editando.ilustracao }}" alt="Ilustração atual" style="height:36px;width:36px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">
+              {% else %}
+                <span style="font-size:1.6rem;">{{ editando.ilustracao }}</span>
+              {% endif %}
+              <span style="font-size:0.75rem;color:#999;">imagem atual</span>
+            </div>
+          {% endif %}
+
+          <span class="hint" style="margin-top:0.3rem;">Ou use o campo abaixo para emoji / URL.</span>
+          <input type="text" id="ilustracao" name="ilustracao" maxlength="500"
+                 value="{{ editando.ilustracao|default:'' }}"
+                 placeholder="Ex: 🌀 ou https://..."
+                 style="margin-top:0.4rem;">
+        </div>
+
+        <div class="form-group flex full">
+          <label for="nivel_superior">Sub-opção de <span style="font-weight:400;text-transform:none">(opcional)</span></label>
+          <select id="nivel_superior" name="nivel_superior">
+            <option value="">— Opção raiz (nível principal) —</option>
+            {% for op in opcoes_raiz %}
+              {% if not editando or op.pk != editando.pk %}
+                <option value="{{ op.pk }}"
+                  {% if editando and editando.nivel_superior_id == op.pk %}selected{% endif %}
+                  {% if pre_selecionado == op.pk|stringformat:"s" %}selected{% endif %}>
+                  {% if op.ilustracao %}{{ op.ilustracao }} {% endif %}{{ op.nome }}
+                </option>
+              {% endif %}
+            {% endfor %}
+          </select>
+          <span class="hint">Deixe em branco para criar uma opção de nível principal. Selecione uma opção raiz para criar uma sub-opção.</span>
+        </div>
+
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          {% if editando %}💾 Salvar alterações{% else %}✅ Criar opção{% endif %}
+        </button>
+        {% if editando %}
+          <a href="{% url 'caracteristica_atendimento_opcoes' caracteristica.pk %}" class="btn btn-ghost">Cancelar</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Tabela de opções -->
+  <div class="card-plain">
+    <div class="table-header">
+      <h3>Opções cadastradas</h3>
+      <span class="badge-count">{{ total_opcoes }}</span>
+    </div>
+
+    {% if opcoes_raiz %}
+      <table>
+        <thead>
+          <tr>
+            <th style="width:50px;background:var(--color-forest);color:var(--color-sand);font-size:.75rem;letter-spacing:.06em;border-radius:8px 0 0 0;">Ícone</th>
+            <th style="background:var(--color-forest);color:var(--color-sand);font-size:.75rem;letter-spacing:.06em;">Nome</th>
+            <th style="width:120px;background:var(--color-forest);color:var(--color-sand);font-size:.75rem;letter-spacing:.06em;">Nível</th>
+            <th style="width:90px;background:var(--color-forest);color:var(--color-sand);font-size:.75rem;letter-spacing:.06em;">Sub-opções</th>
+            <th style="width:120px;background:var(--color-forest);color:var(--color-sand);font-size:.75rem;letter-spacing:.06em;border-radius:0 8px 0 0;">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for op in opcoes_raiz %}
+          <tr>
+            <td class="ilustracao-preview">
+              {% if op.ilustracao %}
+                {% if op.ilustracao|slice:":4" == "http" or op.ilustracao|slice:":1" == "/" %}
+                  <img src="{{ op.ilustracao }}" alt="{{ op.nome }}">
+                {% else %}
+                  {{ op.ilustracao }}
+                {% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td class="opcao-raiz">{{ op.nome }}</td>
+            <td><span style="font-size:.75rem;color:#888;">Principal</span></td>
+            <td style="text-align:center;color:#888;font-size:.85rem;">{{ op.subdivisoes.count }}</td>
+            <td class="actions">
+              <a href="{% url 'opcao_caracteristica_editar' caracteristica.pk op.pk %}"
+                 class="btn-icon" title="Editar">✏️</a>
+              <button class="btn-icon" title="Excluir"
+                onclick="confirmarExclusao('{{ op.pk }}', '{{ op.nome|escapejs }}', false)">🗑️</button>
+              <button class="btn-icon" title="Adicionar sub-opção"
+                onclick="adicionarSub('{{ op.pk|escapejs }}')" style="font-size:.85rem;">＋sub</button>
+            </td>
+          </tr>
+          {% for sub in op.subdivisoes.all %}
+          <tr>
+            <td class="ilustracao-preview" style="color:#aaa;">
+              {% if sub.ilustracao %}
+                {% if sub.ilustracao|slice:":4" == "http" or sub.ilustracao|slice:":1" == "/" %}
+                  <img src="{{ sub.ilustracao }}" alt="{{ sub.nome }}">
+                {% else %}
+                  {{ sub.ilustracao }}
+                {% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td class="opcao-sub">{{ sub.nome }}</td>
+            <td><span class="tag-sub">Sub-opção</span></td>
+            <td style="text-align:center;color:#ccc;font-size:.85rem;">—</td>
+            <td class="actions">
+              <a href="{% url 'opcao_caracteristica_editar' caracteristica.pk sub.pk %}"
+                 class="btn-icon" title="Editar">✏️</a>
+              <button class="btn-icon" title="Excluir"
+                onclick="confirmarExclusao('{{ sub.pk }}', '{{ sub.nome|escapejs }}', true)">🗑️</button>
+            </td>
+          </tr>
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="empty-state">
+        <div class="ph-icon">🔖</div>
+        <p>Nenhuma opção cadastrada ainda.<br>Use o formulário acima para criar a primeira.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <a href="{% url 'caracteristicas_atendimento' %}" class="btn btn-ghost">← Voltar às características</a>
+
+  <!-- Modal de confirmação de exclusão -->
+  <div class="modal-overlay" id="modal-excluir">
+    <div class="modal">
+      <h3>Excluir opção</h3>
+      <p id="modal-msg">Tem certeza que deseja excluir esta opção?</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <form id="form-excluir" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Excluir</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function confirmarExclusao(pk, nome, isSub) {
+    const msg = isSub
+      ? `Excluir a sub-opção "${nome}"?`
+      : `Excluir a opção "${nome}"? Todas as sub-opções vinculadas também serão removidas.`;
+    document.getElementById('modal-msg').textContent = msg;
+    document.getElementById('form-excluir').action =
+      `/admin-painel/caracteristicas-atendimento/{{ caracteristica.pk }}/opcoes/${pk}/excluir/`;
+    document.getElementById('modal-excluir').classList.add('open');
+  }
+
+  function fecharModal() {
+    document.getElementById('modal-excluir').classList.remove('open');
+  }
+
+  document.getElementById('modal-excluir').addEventListener('click', function(e) {
+    if (e.target === this) fecharModal();
+  });
+
+  function adicionarSub(opcaoPk) {
+    document.getElementById('nivel_superior').value = opcaoPk;
+    document.getElementById('nome').focus();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Drag-and-drop illustration ──
+  const dropZone   = document.getElementById('drop-zone');
+  const fileInput  = document.getElementById('ilustracao_arquivo');
+  const preview    = document.getElementById('drop-preview');
+  const previewImg = document.getElementById('drop-img');
+  const previewName= document.getElementById('drop-filename');
+
+  function showPreview(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    previewImg.src = URL.createObjectURL(file);
+    previewName.textContent = file.name;
+    preview.style.display = 'flex';
+  }
+
+  fileInput.addEventListener('change', () => showPreview(fileInput.files[0]));
+
+  dropZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      // Assign to the file input via DataTransfer
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInput.files = dt.files;
+      showPreview(file);
+    }
+  });
+</script>
+{% endblock %}
