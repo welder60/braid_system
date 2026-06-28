@@ -9,25 +9,26 @@ Requisito de seguranca:
 Toda decisao de "qual estabelecimento este usuario pode acessar" passa por
 aqui, para evitar divergencias entre views, context processors e templates.
 """
+
 from .models import Estabelecimento, EstabelecimentoUsuario
 
 # Apenas o papel 'admin' tem visao irrestrita dos estabelecimentos.
 # (O papel 'consultor' NAO e considerado administrador para fins de
 # isolamento de dados — ver decisao registrada com o time.)
-TIPO_ADMIN = 'admin'
+TIPO_ADMIN = "admin"
 
 
 def is_admin(user):
     """True se o usuario autenticado e administrador (visao irrestrita)."""
     return bool(
-        getattr(user, 'is_authenticated', False)
-        and getattr(user, 'tipo', None) == TIPO_ADMIN
+        getattr(user, "is_authenticated", False)
+        and getattr(user, "tipo", None) == TIPO_ADMIN
     )
 
 
 def usuario_vinculado(user, estabelecimento):
     """True se existe vinculo (EstabelecimentoUsuario) entre user e estabelecimento."""
-    if estabelecimento is None or not getattr(user, 'is_authenticated', False):
+    if estabelecimento is None or not getattr(user, "is_authenticated", False):
         return False
     return EstabelecimentoUsuario.objects.filter(
         usuario=user, estabelecimento=estabelecimento
@@ -39,7 +40,7 @@ def pode_acessar_estabelecimento(user, estabelecimento):
     Regra mestra de autorizacao:
     admin acessa qualquer estabelecimento; os demais, apenas os vinculados.
     """
-    if not getattr(user, 'is_authenticated', False):
+    if not getattr(user, "is_authenticated", False):
         return False
     if is_admin(user):
         return True
@@ -59,27 +60,25 @@ def get_estabelecimento_ativo(request, auto_select=False):
       sessao. As views de dados usam auto_select=False de proposito: sem
       selecao explicita, nada e exibido.
     """
-    user = getattr(request, 'user', None)
-    if user is None or not getattr(user, 'is_authenticated', False):
+    user = getattr(request, "user", None)
+    if user is None or not getattr(user, "is_authenticated", False):
         return None
 
-    est_id = request.session.get('estabelecimento_ativo_id')
+    est_id = request.session.get("estabelecimento_ativo_id")
     if est_id:
         est = Estabelecimento.objects.filter(pk=est_id).first()
         if est is not None and pode_acessar_estabelecimento(user, est):
             return est
         # id inexistente, invalido ou nao autorizado: nao confiar nele.
-        request.session.pop('estabelecimento_ativo_id', None)
+        request.session.pop("estabelecimento_ativo_id", None)
 
     if auto_select and not is_admin(user):
-        vinculos = (
-            EstabelecimentoUsuario.objects
-            .filter(usuario=user)
-            .select_related('estabelecimento')
+        vinculos = EstabelecimentoUsuario.objects.filter(usuario=user).select_related(
+            "estabelecimento"
         )
         if vinculos.count() == 1:
             est = vinculos.first().estabelecimento
-            request.session['estabelecimento_ativo_id'] = str(est.pk)
+            request.session["estabelecimento_ativo_id"] = str(est.pk)
             return est
 
     return None

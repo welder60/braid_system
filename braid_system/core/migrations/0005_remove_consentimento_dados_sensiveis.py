@@ -5,19 +5,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0004_estabelecimentousuario_data_inclusao_and_more'),
+        ("core", "0004_estabelecimentousuario_data_inclusao_and_more"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='estabelecimentousuario',
-            name='data_inclusao',
+            model_name="estabelecimentousuario",
+            name="data_inclusao",
             field=models.DateTimeField(default=django.utils.timezone.now),
         ),
         migrations.RemoveField(
-            model_name='cliente',
-            name='consentimento_dados_sensiveis',
+            model_name="cliente",
+            name="consentimento_dados_sensiveis",
         ),
     ]

@@ -2,10 +2,10 @@ from django.db import migrations, models
 
 
 FORMAS_PADRAO = [
-    ('PIX', True),
-    ('Débito', False),
-    ('Crédito', False),
-    ('Dinheiro', False),
+    ("PIX", True),
+    ("Débito", False),
+    ("Crédito", False),
+    ("Dinheiro", False),
 ]
 
 
@@ -15,7 +15,7 @@ def seed_formas_pagamento(apps, schema_editor):
     PIX e definida como a forma de pagamento padrao. As demais formas
     existentes (se houver) sao rebaixadas para garantir uma unica padrao.
     """
-    FormaPagamento = apps.get_model('core', 'FormaPagamento')
+    FormaPagamento = apps.get_model("core", "FormaPagamento")
 
     # Garante que nenhuma forma pre-existente fique marcada como padrao
     # antes de definirmos a nova padrao (respeita a constraint unica).
@@ -25,7 +25,7 @@ def seed_formas_pagamento(apps, schema_editor):
         forma, _ = FormaPagamento.objects.get_or_create(nome=nome)
         if forma.padrao != padrao:
             forma.padrao = padrao
-            forma.save(update_fields=['padrao'])
+            forma.save(update_fields=["padrao"])
 
 
 def unseed_formas_pagamento(apps, schema_editor):
@@ -33,24 +33,23 @@ def unseed_formas_pagamento(apps, schema_editor):
 
     Nao deletamos as formas para evitar violar a PROTECT de Pagamento.
     """
-    FormaPagamento = apps.get_model('core', 'FormaPagamento')
+    FormaPagamento = apps.get_model("core", "FormaPagamento")
     FormaPagamento.objects.filter(padrao=True).update(padrao=False)
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0008_alter_pagamento_forma_pagamento_and_more'),
+        ("core", "0008_alter_pagamento_forma_pagamento_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='formapagamento',
-            name='padrao',
+            model_name="formapagamento",
+            name="padrao",
             field=models.BooleanField(
                 default=False,
-                help_text='Indica a forma de pagamento padrão. Apenas uma pode ser a padrão.',
-                verbose_name='Padrão',
+                help_text="Indica a forma de pagamento padrão. Apenas uma pode ser a padrão.",
+                verbose_name="Padrão",
             ),
         ),
         migrations.RunPython(
@@ -58,11 +57,11 @@ class Migration(migrations.Migration):
             reverse_code=unseed_formas_pagamento,
         ),
         migrations.AddConstraint(
-            model_name='formapagamento',
+            model_name="formapagamento",
             constraint=models.UniqueConstraint(
-                fields=['padrao'],
+                fields=["padrao"],
                 condition=models.Q(padrao=True),
-                name='unique_forma_pagamento_padrao',
+                name="unique_forma_pagamento_padrao",
             ),
         ),
     ]

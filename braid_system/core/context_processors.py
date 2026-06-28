@@ -11,4 +11,6 @@ def estabelecimento_ativo(request):
     """
     if not request.user.is_authenticated:
         return {}
-    return {'estabelecimento_ativo': get_estabelecimento_ativo(request, auto_select=True)}
+    return {
+        "estabelecimento_ativo": get_estabelecimento_ativo(request, auto_select=True)
+    }

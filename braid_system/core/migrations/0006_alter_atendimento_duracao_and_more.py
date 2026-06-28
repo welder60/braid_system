@@ -4,20 +4,21 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0005_remove_consentimento_dados_sensiveis'),
+        ("core", "0005_remove_consentimento_dados_sensiveis"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='atendimento',
-            name='duracao',
-            field=models.IntegerField(blank=True, help_text='Duracao em minutos', null=True),
+            model_name="atendimento",
+            name="duracao",
+            field=models.IntegerField(
+                blank=True, help_text="Duracao em minutos", null=True
+            ),
         ),
         migrations.AlterField(
-            model_name='pagamento',
-            name='forma_pagamento',
+            model_name="pagamento",
+            name="forma_pagamento",
             field=models.CharField(blank=True, max_length=100),
         ),
     ]

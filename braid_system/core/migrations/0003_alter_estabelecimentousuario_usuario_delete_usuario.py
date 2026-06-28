@@ -6,20 +6,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('core', '0002_categoriacusto_vinculado_atendimento'),
+        ("core", "0002_categoriacusto_vinculado_atendimento"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='estabelecimentousuario',
-            name='usuario',
-            field=models.ForeignKey(db_column='id_usuario', on_delete=django.db.models.deletion.CASCADE,
-                                    related_name='estabelecimento_usuarios', to=settings.AUTH_USER_MODEL),
+            model_name="estabelecimentousuario",
+            name="usuario",
+            field=models.ForeignKey(
+                db_column="id_usuario",
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="estabelecimento_usuarios",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.DeleteModel(
-            name='Usuario',
+            name="Usuario",
         ),
     ]

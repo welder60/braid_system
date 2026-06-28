@@ -1,12 +1,16 @@
 import uuid
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    PermissionsMixin,
+)
 from django.db import models
 
 
 class UsuarioManager(BaseUserManager):
     def create_user(self, email, nome, password=None, **extra_fields):
         if not email:
-            raise ValueError('O e-mail é obrigatório')
+            raise ValueError("O e-mail é obrigatório")
         email = self.normalize_email(email)
         user = self.model(email=email, nome=nome, **extra_fields)
         user.set_password(password)
@@ -14,18 +18,18 @@ class UsuarioManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, nome, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('tipo', 'admin')
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("tipo", "admin")
         return self.create_user(email, nome, password, **extra_fields)
 
 
 class Usuario(AbstractBaseUser, PermissionsMixin):
     TIPO_CHOICES = [
-        ('admin', 'Admin'),
-        ('profissional', 'Profissional'),
-        ('gerente', 'Gerente'),
-        ('consultor', 'Consultor'),
+        ("admin", "Admin"),
+        ("profissional", "Profissional"),
+        ("gerente", "Gerente"),
+        ("consultor", "Consultor"),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -40,28 +44,28 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     ativo = models.BooleanField(default=True)
 
     groups = models.ManyToManyField(
-        'auth.Group',
-        related_name='security_usuario_set',
+        "auth.Group",
+        related_name="security_usuario_set",
         blank=True,
     )
     user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        related_name='security_usuario_set',
+        "auth.Permission",
+        related_name="security_usuario_set",
         blank=True,
     )
 
     objects = UsuarioManager()
 
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['nome']
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["nome"]
 
     class Meta:
-        db_table = 'security_usuario'
-        verbose_name = 'Usuario'
-        verbose_name_plural = 'Usuarios'
+        db_table = "security_usuario"
+        verbose_name = "Usuario"
+        verbose_name_plural = "Usuarios"
 
     def __str__(self):
-        return f'{self.nome} ({self.email})'
+        return f"{self.nome} ({self.email})"
 
     @property
     def is_active(self):
