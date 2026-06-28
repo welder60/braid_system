@@ -67,3 +67,4 @@ site/
 *.bat
 erro_log.txt
 error_log.txt
+lint_errors.txt
