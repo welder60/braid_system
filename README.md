@@ -1,3 +1,5 @@
+<img width="158" height="186" alt="logo" src="https://github.com/user-attachments/assets/d4640b2a-9b15-4ba1-b141-1e65bb22575b" />
+
 # Braid System
 
 Aplicação web **mobile-first** de gestão financeira desenvolvida exclusivamente para trancistas autônomas e MEIs.
