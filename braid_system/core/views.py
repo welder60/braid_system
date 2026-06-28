@@ -2147,14 +2147,17 @@ def consultor_dashboard_caracteristicas(request):
 
     anos_disponiveis = []
     kpi = {
-        'lucro':           _fmt_money_br(Decimal('0')),
-        'lucro_positivo':  True,
-        'faturado':        _fmt_money_br(Decimal('0')),
-        'atendimentos':    0,
-        'custos':          _fmt_money_br(Decimal('0')),
-        'duracao_media':   None,
-        'lucro_por_atend': None,
-        'lucro_por_hora':  None,
+        'lucro':              _fmt_money_br(Decimal('0')),
+        'lucro_positivo':     True,
+        'faturado':           _fmt_money_br(Decimal('0')),
+        'atendimentos':       0,
+        'custos':             _fmt_money_br(Decimal('0')),
+        'custo_medio_atend':  None,
+        'custos_individuais': _fmt_money_br(Decimal('0')),
+        'tem_custos_individuais': False,
+        'duracao_media':      None,
+        'lucro_por_atend':    None,
+        'lucro_por_hora':     None,
     }
 
     if estabelecimento:
@@ -2188,11 +2191,39 @@ def consultor_dashboard_caracteristicas(request):
             .aggregate(s=Sum('valor'))['s']
         ) or Decimal('0')
 
-        custos_total = (
+        # ── Custos estimados ─────────────────────────────────────────────────
+        # O custo individual por atendimento normalmente não é informado, então
+        # é estimado: rateia-se os custos gerais (não vinculados a um atendimento)
+        # do período pela quantidade TOTAL de atendimentos do período, obtendo o
+        # custo médio por atendimento. Esse custo médio é multiplicado pela
+        # quantidade de atendimentos encontrados pelo filtro e, em seguida, são
+        # somados os custos individuais (vinculados) dos atendimentos filtrados.
+        # Assim o custo (e o lucro) refletem apenas o subconjunto filtrado.
+        custos_gerais = (
             Custo.objects
-            .filter(estabelecimento=estabelecimento, data__gte=data_ini, data__lte=data_fim)
+            .filter(estabelecimento=estabelecimento,
+                    data__gte=data_ini, data__lte=data_fim,
+                    atendimento__isnull=True)
             .aggregate(s=Sum('valor'))['s']
         ) or Decimal('0')
+
+        total_atend_periodo = Atendimento.objects.filter(
+            estabelecimento=estabelecimento,
+            data__gte=data_ini, data__lte=data_fim,
+        ).count()
+
+        custo_medio_atend = (
+            (custos_gerais / total_atend_periodo) if total_atend_periodo else Decimal('0')
+        )
+
+        # Custos individuais (vinculados) dos atendimentos efetivamente filtrados
+        custos_individuais = (
+            Custo.objects
+            .filter(estabelecimento=estabelecimento, atendimento__in=qs)
+            .aggregate(s=Sum('valor'))['s']
+        ) or Decimal('0')
+
+        custos_total = (custo_medio_atend * total_atend) + custos_individuais
 
         lucro = faturado - custos_total
         horas_dec = (Decimal(total_min) / Decimal(60)) if total_min else Decimal('0')
@@ -2201,14 +2232,17 @@ def consultor_dashboard_caracteristicas(request):
         duracao_media_min = round(total_min / total_atend) if total_atend else None
 
         kpi = {
-            'lucro':           _fmt_money_br(lucro),
-            'lucro_positivo':  lucro >= 0,
-            'faturado':        _fmt_money_br(faturado),
-            'atendimentos':    total_atend,
-            'custos':          _fmt_money_br(custos_total),
-            'duracao_media':   _fmt_horas_br(duracao_media_min) if duracao_media_min is not None else None,
-            'lucro_por_atend': _fmt_money_br(lucro_por_atend) if lucro_por_atend is not None else None,
-            'lucro_por_hora':  _fmt_money_br(lucro_por_hora)  if lucro_por_hora  is not None else None,
+            'lucro':              _fmt_money_br(lucro),
+            'lucro_positivo':     lucro >= 0,
+            'faturado':           _fmt_money_br(faturado),
+            'atendimentos':       total_atend,
+            'custos':             _fmt_money_br(custos_total),
+            'custo_medio_atend':  _fmt_money_br(custo_medio_atend) if total_atend_periodo else None,
+            'custos_individuais': _fmt_money_br(custos_individuais),
+            'tem_custos_individuais': custos_individuais > 0,
+            'duracao_media':      _fmt_horas_br(duracao_media_min) if duracao_media_min is not None else None,
+            'lucro_por_atend':    _fmt_money_br(lucro_por_atend) if lucro_por_atend is not None else None,
+            'lucro_por_hora':     _fmt_money_br(lucro_por_hora)  if lucro_por_hora  is not None else None,
         }
 
     import json

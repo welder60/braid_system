@@ -202,6 +202,39 @@
   .kpi-desc { font-size: 0.75rem; color: #aaa; }
   .kpi-value.pos { color: #1a5c36; }
   .kpi-value.neg { color: #b23b2e; }
+  .kpi-label .kpi-info {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 13px;
+    height: 13px;
+    margin-left: 0.25rem;
+    border-radius: 50%;
+    background: rgba(30,42,31,0.18);
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    cursor: help;
+    vertical-align: middle;
+  }
+
+  /* ── Nota de estimativa ── */
+  .estimativa-nota {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    background: #fbf7ec;
+    border: 1px solid #ecdfc0;
+    border-left: 3px solid var(--color-gold);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin: -0.5rem 0 1.75rem;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: rgba(30,42,31,0.72);
+  }
+  .estimativa-nota svg { flex-shrink: 0; margin-top: 1px; color: var(--color-earth); opacity: 0.85; }
+  .estimativa-nota strong { color: var(--color-forest); }
 
   /* ── Métricas secundárias ── */
   .metrics-section-title {
@@ -382,11 +415,14 @@
     <!-- ── KPI Cards ── -->
     <div class="kpi-grid">
       <div class="kpi accent">
-        <span class="kpi-label">Lucro</span>
+        <span class="kpi-label">
+          Lucro
+          <span class="kpi-info" title="Estimado: Faturado − Custos estimados.">i</span>
+        </span>
         <span class="kpi-value {% if kpi.lucro_positivo %}pos{% else %}neg{% endif %}">
           <span class="cur">R$</span>{{ kpi.lucro }}
         </span>
-        <span class="kpi-desc">no período</span>
+        <span class="kpi-desc">estimado no período</span>
       </div>
       <div class="kpi gold">
         <span class="kpi-label">Faturado</span>
@@ -399,11 +435,26 @@
         <span class="kpi-desc">no período</span>
       </div>
       <div class="kpi earth">
-        <span class="kpi-label">Custos</span>
+        <span class="kpi-label">
+          Custos
+          <span class="kpi-info" title="Estimado: custo médio por atendimento (rateio dos custos gerais do período) × atendimentos filtrados + custos individuais dos atendimentos encontrados.">i</span>
+        </span>
         <span class="kpi-value"><span class="cur">R$</span>{{ kpi.custos }}</span>
-        <span class="kpi-desc">registrados</span>
+        <span class="kpi-desc">estimados</span>
       </div>
     </div>
+
+    <!-- ── Nota: como custos e lucro são estimados ── -->
+    <p class="estimativa-nota">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span>
+        <strong>Custos e lucro estimados.</strong>
+        Como o custo não é informado por atendimento, usa-se o custo médio por atendimento
+        (rateio dos custos gerais do período{% if kpi.custo_medio_atend %} — R$ {{ kpi.custo_medio_atend }}/atend.{% endif %})
+        multiplicado pelos {{ kpi.atendimentos }} atendimento{{ kpi.atendimentos|pluralize }} filtrado{{ kpi.atendimentos|pluralize }}{% if kpi.tem_custos_individuais %}, somado aos custos individuais (R$ {{ kpi.custos_individuais }}) dos atendimentos encontrados{% endif %}.
+        O lucro é a diferença entre o faturado e esse custo estimado.
+      </span>
+    </p>
 
     <!-- ── Métricas secundárias ── -->
     <div class="metrics-section-title">Indicadores detalhados</div>
@@ -416,6 +467,16 @@
         </div>
         <div class="metric-value">
           {% if kpi.duracao_media %}{{ kpi.duracao_media }}{% else %}<span class="muted">—</span>{% endif %}
+        </div>
+      </div>
+
+      <div class="metric">
+        <div class="metric-top">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <span class="metric-label">Custo médio / atend.</span>
+        </div>
+        <div class="metric-value">
+          {% if kpi.custo_medio_atend %}<span class="cur">R$</span>{{ kpi.custo_medio_atend }}{% else %}<span class="muted">—</span>{% endif %}
         </div>
       </div>
 
