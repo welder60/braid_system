@@ -249,14 +249,7 @@ Se for necessário permitir HTML rico, use uma biblioteca de sanitização conso
 
 ### 5.3 CSRF
 
-O middleware CSRF do Django está ativo globalmente. Não o desative nem em views que parecem "seguras". Toda view que altera estado usa `{% csrf_token %}` no formulário:
-
-```html
-<form method="post">
-  {% csrf_token %}
-  ...
-</form>
-```
+O middleware CSRF do Django está ativo globalmente. Não o desative nem em views que parecem "seguras". Toda view que altera estado usa `csrf_token` no formulário.
 
 Views que recebem dados via JavaScript usam o header `X-CSRFToken`. O token é lido do cookie (não httpOnly para este propósito).
 
