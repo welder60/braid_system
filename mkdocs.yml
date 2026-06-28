@@ -40,3 +40,5 @@ nav:
       - Visão do Produto: braid-system-vision.md
   - Design:
       - Manual de Identidade Visual: manual-identidade-visual.md
+  - Desenvolvimento:
+      - Regras de Desenvolvimento: regras-de-desenvolvimento.md
