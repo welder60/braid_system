@@ -1,0 +1,37 @@
+name: Docs
+
+on:
+  push:
+    branches: ["main", "developer"]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    name: Publicar no GitHub Pages
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar MkDocs e plugins
+        run: |
+          pip install \
+            mkdocs-material \
+            mkdocs-minify-plugin
+
+      - name: Publicar no GitHub Pages
+        run: mkdocs gh-deploy --force
