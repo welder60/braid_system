@@ -6,6 +6,11 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
+  pull_request: # <- Adicionado: Testa as alterações antes de aceitar o Merge na main
+    branches: ["main"]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
 
   workflow_dispatch:
 
@@ -33,5 +38,12 @@ jobs:
             mkdocs-material \
             mkdocs-minify-plugin
 
+      # PASSO 1: Roda sempre (na developer, na main e em PRs). 
+      # Se houver link quebrado ou erro, o workflow para aqui.
+      - name: Validar Documentação (Modo Estrito)
+        run: mkdocs build --strict
+
+      # PASSO 2: O deploy real SÓ acontece se o commit for na branch main
       - name: Publicar no GitHub Pages
+        if: github.ref == 'refs/heads/main' # <- Filtro de segurança
         run: mkdocs gh-deploy --force
