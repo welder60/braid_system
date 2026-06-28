@@ -1086,8 +1086,6 @@ def atendimento_excluir(request, pk):
         return redirect('home')
     estabelecimento = _get_estabelecimento_ativo(request)
     atendimento = get_object_or_404(Atendimento, pk=pk, estabelecimento=estabelecimento)
-    mes = atendimento.data.month
-    ano = atendimento.data.year
     if request.method == 'POST':
         atendimento.delete()
         messages.success(request, 'Atendimento removido.')
@@ -1104,8 +1102,7 @@ def _get_estabelecimento_ativo(request):
 
 
 def _ctx_custos(request, editando=None, mes=None, ano=None):
-    from datetime import date, datetime
-    import calendar
+    from datetime import date
 
     estabelecimento = _get_estabelecimento_ativo(request)
     hoje = date.today()
@@ -1845,7 +1842,6 @@ def consultor_exportar_csv(request):
     if not estabelecimento:
         return redirect('consultor_relatorios')
 
-    hoje = date_cls.today()
     try:
         ano = int(request.GET.get('ano', 0)) or None
         mes = int(request.GET.get('mes', 0)) or None
