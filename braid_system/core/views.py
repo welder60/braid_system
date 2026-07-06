@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from functools import wraps
@@ -10,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.db import transaction
 from django.db.models import ProtectedError
+from django.utils.safestring import mark_safe
 from .models import (
     Estabelecimento,
     EstabelecimentoUsuario,
@@ -993,6 +995,7 @@ def _ctx_atendimentos(request, editando=None, mes=None, ano=None):
     formas_pagamento = FormaPagamento.objects.order_by("-padrao", "nome")
 
     # Atributos calculados para o formulario de edicao
+    edicao_json = None
     if editando is not None:
         editando.total_pago = sum(
             (p.valor for p in editando.pagamentos.all()),
@@ -1004,6 +1007,32 @@ def _ctx_atendimentos(request, editando=None, mes=None, ano=None):
             else ""
         )
 
+        # Estado inicial para o wizard em modo edicao (consumido via JSON no template)
+        primeiro_pagamento = editando.pagamentos.all()[0] if editando.pagamentos.all() else None
+        opcoes_selecionadas = [
+            str(ac.opcao_id) for ac in editando.caracteristicas.all()
+        ]
+        custos_por_categoria = {}
+        for c in editando.custos.all():
+            if c.categoria_custo_id:
+                custos_por_categoria[str(c.categoria_custo_id)] = f"{c.valor:.2f}"
+
+        edicao_json = {
+            "pk": str(editando.pk),
+            "clienteId": str(editando.cliente_id) if editando.cliente_id else "",
+            "data": editando.data.strftime("%Y-%m-%d") if editando.data else "",
+            "hora": editando.hora.strftime("%H:%M") if editando.hora else "",
+            "duracao": editando.duracao_edit,
+            "pagamento": f"{editando.total_pago:.2f}" if editando.total_pago else "",
+            "formaPagamentoId": (
+                str(primeiro_pagamento.forma_pagamento_id)
+                if primeiro_pagamento and primeiro_pagamento.forma_pagamento_id
+                else ""
+            ),
+            "opcoes": opcoes_selecionadas,
+            "custos": custos_por_categoria,
+        }
+
     agora = datetime.now()
     return {
         "atendimentos": atendimentos_lista,
@@ -1014,6 +1043,16 @@ def _ctx_atendimentos(request, editando=None, mes=None, ano=None):
         "formas_pagamento": formas_pagamento,
         "duracoes_sugeridas": duracoes_sugeridas,
         "editando": editando,
+        "edicao_json": (
+            mark_safe(
+                json.dumps(edicao_json)
+                .replace("<", "\\u003c")
+                .replace(">", "\\u003e")
+                .replace("&", "\\u0026")
+            )
+            if edicao_json
+            else ""
+        ),
         "hoje": agora.strftime("%Y-%m-%d"),
         "agora": agora.strftime("%H:%M"),
         "mes_ativo": mes,
@@ -1048,12 +1087,15 @@ def atendimento_verificar(request):
         data_obj = datetime.strptime(data_str, "%Y-%m-%d").date()
     except ValueError:
         return JsonResponse({"duplicata": False})
-    duplicata = Atendimento.objects.filter(
+    qs = Atendimento.objects.filter(
         estabelecimento=estabelecimento,
         cliente_id=cliente_id,
         data=data_obj,
-    ).exists()
-    return JsonResponse({"duplicata": duplicata})
+    )
+    excluir_pk = request.GET.get("excluir_pk", "").strip()
+    if excluir_pk:
+        qs = qs.exclude(pk=excluir_pk)
+    return JsonResponse({"duplicata": qs.exists()})
 
 
 def atendimento_criar(request):
@@ -1217,11 +1259,16 @@ def atendimento_editar(request, pk):
         mes = int(request.POST.get("mes", mes))
         ano = int(request.POST.get("ano", ano))
         cliente_id = request.POST.get("cliente_id", "").strip()
+        novo_cliente = request.POST.get("novo_cliente", "").strip()
         data_val = request.POST.get("data", "").strip()
         hora_val = request.POST.get("hora", "").strip()
         duracao_val = request.POST.get("duracao", "").strip()
+        forma_pagamento_id = request.POST.get("forma_pagamento_id", "").strip()
+        opcoes_ids = request.POST.getlist("opcoes")
 
         erros = []
+        if not cliente_id and not novo_cliente:
+            erros.append("Informe o cliente do atendimento.")
         hora_obj = _parse_hora(hora_val)
         if not hora_obj:
             erros.append("A hora é obrigatória.")
@@ -1231,6 +1278,29 @@ def atendimento_editar(request, pk):
             data_obj = None
             erros.append("Data inválida.")
         pagamento_dec = _parse_dinheiro(request.POST.get("pagamento_valor", ""))
+        if pagamento_dec is None or pagamento_dec < 0:
+            pagamento_dec = None
+            erros.append("Informe o valor total recebido pelo serviço.")
+
+        # Data não pode ser futura
+        if data_obj and data_obj > datetime.today().date():
+            erros.append("Não é possível registrar atendimentos com data futura.")
+
+        # Mesmo cliente não pode ter outro atendimento na mesma data
+        if data_obj and cliente_id and not erros:
+            ja_atendido = (
+                Atendimento.objects.filter(
+                    estabelecimento=estabelecimento,
+                    cliente_id=cliente_id,
+                    data=data_obj,
+                )
+                .exclude(pk=atendimento.pk)
+                .exists()
+            )
+            if ja_atendido:
+                erros.append(
+                    "Este cliente já possui um atendimento registrado nesta data."
+                )
 
         if not erros:
             try:
@@ -1241,24 +1311,81 @@ def atendimento_editar(request, pk):
                             pk=cliente_id,
                             estabelecimento=estabelecimento,
                         )
+                    elif novo_cliente:
+                        atendimento.cliente = Cliente.objects.create(
+                            estabelecimento=estabelecimento,
+                            apelido=novo_cliente,
+                        )
                     atendimento.data = data_obj
                     atendimento.hora = hora_obj
                     atendimento.duracao = _duracao_para_minutos(duracao_val)
                     atendimento.save()
 
+                    # Pagamento: atualiza o existente (valor e forma) ou cria
+                    forma_pagamento = None
+                    if forma_pagamento_id:
+                        forma_pagamento = FormaPagamento.objects.filter(
+                            pk=forma_pagamento_id
+                        ).first()
                     if pagamento_dec is not None:
                         pagamento = atendimento.pagamentos.first()
                         if pagamento:
                             pagamento.valor = pagamento_dec
+                            pagamento.forma_pagamento = forma_pagamento
                             pagamento.save()
                         else:
                             Pagamento.objects.create(
                                 atendimento=atendimento,
-                                forma_pagamento=None,
+                                forma_pagamento=forma_pagamento,
                                 valor=pagamento_dec,
                             )
+
+                    # Caracteristicas: substitui o conjunto pelo enviado
+                    atendimento.caracteristicas.all().delete()
+                    opcoes = CaracteristicaAtendimentoOpcao.objects.filter(
+                        pk__in=opcoes_ids
+                    )
+                    for opcao in opcoes:
+                        AtendimentoCaracteristica.objects.get_or_create(
+                            atendimento=atendimento,
+                            opcao=opcao,
+                        )
+
+                    # Custos vinculados: sincroniza por categoria a partir do POST
+                    for chave, bruto in request.POST.items():
+                        if not chave.startswith("custo_"):
+                            continue
+                        cat_id = chave[len("custo_") :]
+                        categoria = CategoriaCusto.objects.filter(
+                            pk=cat_id,
+                            vinculado_atendimento=True,
+                        ).first()
+                        if not categoria:
+                            continue
+                        valor_custo = _parse_dinheiro(bruto)
+                        existente = atendimento.custos.filter(
+                            categoria_custo=categoria
+                        ).first()
+                        if valor_custo is None or valor_custo <= 0:
+                            # Custo zerado/removido: apaga o vínculo existente
+                            if existente:
+                                existente.delete()
+                            continue
+                        if existente:
+                            existente.valor = valor_custo
+                            existente.data = data_obj
+                            existente.save()
+                        else:
+                            Custo.objects.create(
+                                estabelecimento=estabelecimento,
+                                categoria_custo=categoria,
+                                atendimento=atendimento,
+                                descricao=categoria.nome,
+                                data=data_obj,
+                                valor=valor_custo,
+                            )
                 messages.success(request, "Atendimento atualizado.")
-                return redirect("atendimentos")
+                return redirect(f"/atendimentos/?mes={mes or ''}&ano={ano or ''}")
             except Exception as exc:  # noqa: BLE001
                 logger.exception(
                     "Erro ao editar atendimento: pk=%s user=%s", pk, request.user.pk

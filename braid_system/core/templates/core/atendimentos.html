@@ -354,47 +354,6 @@
           </button>
         </div>
 
-        {% if editando %}
-          <div class="form-card">
-            <h2>Editar Atendimento</h2>
-            <form method="post" action="{% url 'atendimento_editar' editando.pk %}?mes={{ mes_ativo }}&ano={{ ano_ativo }}">
-              {% csrf_token %}
-              <input type="hidden" name="mes" value="{{ mes_ativo }}">
-              <input type="hidden" name="ano" value="{{ ano_ativo }}">
-              <div class="form-grid">
-                <div class="form-group full">
-                  <label>Cliente</label>
-                  <select name="cliente_id">
-                    {% for cl in clientes %}
-                      <option value="{{ cl.pk }}" {% if cl.pk == editando.cliente_id %}selected{% endif %}>{{ cl.apelido }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label>Data *</label>
-                  <input type="date" name="data" value="{{ editando.data|date:'Y-m-d' }}" required>
-                </div>
-                <div class="form-group">
-                  <label>Hora *</label>
-                  <input type="time" name="hora" value="{{ editando.hora|time:'H:i' }}" required>
-                </div>
-                <div class="form-group">
-                  <label>Duração (hh:mm)</label>
-                  <input type="time" name="duracao" value="{{ editando.duracao_edit }}">
-                </div>
-                <div class="form-group">
-                  <label>Total recebido (R$)</label>
-                  <input type="text" id="editPagInput" name="pagamento_valor" value="{{ editando.total_pago }}" inputmode="numeric">
-                </div>
-              </div>
-              <div class="form-actions">
-                <a href="{% url 'atendimentos' %}?mes={{ mes_ativo }}&ano={{ ano_ativo }}" class="btn-cancelar">Cancelar</a>
-                <button type="submit" class="btn-salvar">Salvar alterações</button>
-              </div>
-            </form>
-          </div>
-        {% endif %}
-
         {% if not atendimentos %}
           <div class="list-empty">
             Nenhum atendimento registrado ainda.<br>
@@ -587,9 +546,12 @@
     const CSRF = "{{ csrf_token }}";
     const MES_ATIVO = "{{ mes_ativo }}";
     const ANO_ATIVO = "{{ ano_ativo }}";
+    const EDICAO = {{ edicao_json|default:"null" }};
+    const EDITAR_URL_BASE = "/atendimentos/";  // + <pk>/editar/
 
     // ───────────── Estado ─────────────
     let S = {};
+    let editandoPk = null;  // null = criação; caso contrário, edição
     function resetState() {
       const now = new Date();
       const pad = n => String(n).padStart(2,'0');
@@ -601,6 +563,25 @@
         carac: {}, custo: {}
       };
       CARACS.forEach(c => S.carac[c.id] = new Set());
+      editandoPk = null;
+    }
+    // Carrega o estado a partir dos dados de um atendimento existente (edição)
+    function loadState(ed) {
+      resetState();
+      editandoPk = ed.pk;
+      S.clienteId = ed.clienteId || '';
+      S.data = ed.data || S.data;
+      S.hora = ed.hora || S.hora;
+      S.duracao = ed.duracao || '';
+      S.pagamento = ed.pagamento || '';
+      S.formaPagamentoId = ed.formaPagamentoId || FORMA_PADRAO_ID;
+      // Marca as opções de características selecionadas
+      const sel = new Set(ed.opcoes || []);
+      CARACS.forEach(c => {
+        c.opcoes.forEach(o => { if (sel.has(o.id)) S.carac[c.id].add(o.id); });
+      });
+      // Valores de custo por categoria
+      Object.keys(ed.custos || {}).forEach(catId => { S.custo[catId] = ed.custos[catId]; });
     }
 
     // ───────────── Construção do fluxo ─────────────
@@ -658,7 +639,8 @@
       html += '<button type="button" class="btn-w-back" id="wBack" '+(idx===0?'style="visibility:hidden"':'')+'>← Voltar</button>';
       if (optional) html += '<button type="button" class="btn-w-skip" id="wSkip">Pular</button>';
       html += '<span class="spacer"></span>';
-      html += '<button type="button" class="btn-w-next" id="wNext">'+(isLast?'Salvar atendimento':'Próximo →')+'</button>';
+      const lblSalvar = editandoPk ? 'Salvar alterações' : 'Salvar atendimento';
+      html += '<button type="button" class="btn-w-next" id="wNext">'+(isLast?lblSalvar:'Próximo →')+'</button>';
       const footer = document.getElementById('wizFooter');
       footer.innerHTML = html;
       const back = document.getElementById('wBack'); if (back) back.onclick = voltar;
@@ -898,7 +880,8 @@
       if (page.t === 'datahora' && S.clienteId) {
         const erroEl = document.getElementById('wizDataErro');
         try {
-          const r = await fetch(VERIFICAR_URL + '?cliente_id=' + encodeURIComponent(S.clienteId) + '&data=' + encodeURIComponent(S.data));
+          const excluirParam = editandoPk ? ('&excluir_pk=' + encodeURIComponent(editandoPk)) : '';
+          const r = await fetch(VERIFICAR_URL + '?cliente_id=' + encodeURIComponent(S.clienteId) + '&data=' + encodeURIComponent(S.data) + excluirParam);
           const json = await r.json();
           if (json.duplicata) {
             erroEl.textContent = 'Este cliente já possui um atendimento registrado nesta data.';
@@ -925,7 +908,11 @@
     // ───────────── Submit ─────────────
     function submitWizard(){
       const form = document.createElement('form');
-      form.method = 'post'; form.action = CRIAR_URL; form.style.display = 'none';
+      form.method = 'post';
+      form.action = editandoPk
+        ? (EDITAR_URL_BASE + editandoPk + '/editar/?mes=' + MES_ATIVO + '&ano=' + ANO_ATIVO)
+        : CRIAR_URL;
+      form.style.display = 'none';
       const add = (n,v) => { const i = document.createElement('input'); i.type='hidden'; i.name=n; i.value=v; form.appendChild(i); };
       add('csrfmiddlewaretoken', CSRF);
       add('mes', MES_ATIVO);
@@ -943,7 +930,13 @@
           if (!temFilhoSelecionado) add('opcoes', oid);
         });
       });
-      Object.keys(S.custo).forEach(catId => { const v = S.custo[catId]; if (v && parseFloat(v) > 0) add('custo_'+catId, v); });
+      if (editandoPk) {
+        // Em edição, envia todas as categorias vinculadas (inclusive zeradas)
+        // para o backend sincronizar/remover custos conforme necessário.
+        CUSTO_CATS.forEach(cc => add('custo_'+cc.id, S.custo[cc.id] || '0'));
+      } else {
+        Object.keys(S.custo).forEach(catId => { const v = S.custo[catId]; if (v && parseFloat(v) > 0) add('custo_'+catId, v); });
+      }
       document.body.appendChild(form);
       form.submit();
     }
@@ -951,6 +944,15 @@
     // ───────────── Abrir / fechar ─────────────
     function abrirWizard(){
       resetState();
+      document.querySelector('.wizard-title').textContent = 'Novo Atendimento';
+      flow = buildFlow();
+      idx = 0;
+      document.getElementById('wizardOverlay').classList.add('open');
+      render();
+    }
+    function abrirWizardEdicao(ed){
+      loadState(ed);
+      document.querySelector('.wizard-title').textContent = 'Editar Atendimento';
       flow = buildFlow();
       idx = 0;
       document.getElementById('wizardOverlay').classList.add('open');
@@ -981,15 +983,11 @@
 
     document.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ fecharWizard(); fecharModal(); } });
 
-    // ───────────── Máscara de valor — form de edição ─────────────
-    (function() {
-      const el = document.getElementById('editPagInput');
-      if (!el) return;
-      const ctrl = initCurrency(el);
-      el.closest('form').addEventListener('submit', function() {
-        el.value = ctrl.decimalValue;
-      });
-    })();
+    // ───────────── Abertura automática em modo edição ─────────────
+    // Ao acessar a URL de edição, o servidor injeta EDICAO com os dados
+    // do atendimento; abrimos o mesmo wizard já pré-preenchido.
+    if (EDICAO) { abrirWizardEdicao(EDICAO); }
+
   </script>
 </body>
 </html>
