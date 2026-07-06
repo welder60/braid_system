@@ -74,6 +74,11 @@ def home(request):
     return render(request, "core/home.html")
 
 
+def sobre(request):
+    """Página pública 'Sobre' — resumo do sistema e assessoria Braid Compass."""
+    return render(request, "core/sobre.html")
+
+
 def login_view(request):
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
