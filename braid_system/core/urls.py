@@ -12,6 +12,11 @@ urlpatterns = [
         views.cadastro_estabelecimento,
         name="cadastro_estabelecimento",
     ),
+    path(
+        "bem-vindo/estabelecimento/",
+        views.onboarding_estabelecimento,
+        name="onboarding_estabelecimento",
+    ),
     # Usuarios
     path("admin-painel/usuarios/", views.usuarios, name="usuarios"),
     path("admin-painel/usuarios/criar/", views.usuario_criar, name="usuario_criar"),

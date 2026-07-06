@@ -95,6 +95,9 @@ def logout_view(request):
 
 @login_required
 def gestao(request):
+    # Usuário sem estabelecimento vinculado precisa criá-lo primeiro.
+    if _usuario_precisa_onboarding(request.user):
+        return redirect("onboarding_estabelecimento")
     return render(request, "core/gestao.html")
 
 
@@ -148,6 +151,58 @@ def cadastro_estabelecimento(request):
             messages.success(request, f'"{nome}" cadastrado com sucesso!')
             return redirect("cadastro_estabelecimento")
     return render(request, "core/cadastro_estabelecimento.html")
+
+
+def _usuario_precisa_onboarding(user):
+    """
+    True se o usuário deve passar pelo onboarding de estabelecimento.
+
+    Admin tem visão irrestrita (não precisa de vínculo). Os demais precisam
+    de pelo menos um vínculo em EstabelecimentoUsuario para operar o sistema.
+    """
+    if is_admin(user):
+        return False
+    return not EstabelecimentoUsuario.objects.filter(usuario=user).exists()
+
+
+@login_required
+def onboarding_estabelecimento(request):
+    """
+    Primeiro acesso: o usuário cria seu estabelecimento e é vinculado a ele
+    como administrador do estabelecimento (tipo_acesso='administrar').
+
+    Quem já possui vínculo (ou é admin do sistema) não precisa deste passo e
+    é redirecionado para a gestão.
+    """
+    if not _usuario_precisa_onboarding(request.user):
+        return redirect("gestao")
+
+    if request.method == "POST":
+        nome = request.POST.get("nome", "").strip()
+        if not nome:
+            messages.error(request, "Informe o nome do estabelecimento.")
+        else:
+            with transaction.atomic():
+                estabelecimento = Estabelecimento.objects.create(nome=nome)
+                EstabelecimentoUsuario.objects.create(
+                    estabelecimento=estabelecimento,
+                    usuario=request.user,
+                    tipo_acesso="administrar",
+                    incluido_por=request.user,
+                )
+            # Já deixa o novo estabelecimento como ativo na sessão.
+            request.session["estabelecimento_ativo_id"] = str(estabelecimento.pk)
+            logger.info(
+                "Onboarding: estabelecimento criado e vinculado. user=%s est=%s",
+                request.user.pk,
+                estabelecimento.pk,
+            )
+            messages.success(
+                request, f'"{nome}" criado com sucesso! Você já está vinculado a ele.'
+            )
+            return redirect("gestao")
+
+    return render(request, "core/onboarding_estabelecimento.html")
 
 
 # ── Estabelecimentos ───────────────────────────────────────────────────────────

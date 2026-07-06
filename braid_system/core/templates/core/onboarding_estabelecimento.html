@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bem-vindo — Braid System</title>
+  {% load static %}
+  <link rel="icon" type="image/png" href="{% static 'core/img/logo.png' %}">
+  <style>
+    :root {
+      --color-moss:      #2F3B2E;
+      --color-forest:    #1E2A1F;
+      --color-terracota: #8C4A2F;
+      --color-earth:     #5A3A20;
+      --color-gold:      #C8A15A;
+      --color-sand:      #E7DAC1;
+      --bg:           var(--color-sand);
+      --surface:      #FFFFFF;
+      --text:         var(--color-forest);
+      --text-muted:   var(--color-earth);
+      --border:       rgba(0,0,0,0.13);
+      --primary:      var(--color-terracota);
+      --primary-text: #FFFFFF;
+      --accent:       var(--color-gold);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    main {
+      flex: 0 1 auto;
+      padding: 1.5rem 1.25rem 2rem;
+      max-width: 520px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .welcome { text-align: center; margin-bottom: 1.5rem; }
+    .welcome h1 { font-size: 1.5rem; color: var(--color-forest); margin-bottom: 0.5rem; }
+    .welcome p { font-size: 0.95rem; color: var(--text-muted); line-height: 1.5; }
+
+    .messages { list-style: none; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .msg { padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 500; }
+    .msg-success { background: rgba(74,107,58,0.12); color: #2E5220; border-left: 3px solid #4A6B3A; }
+    .msg-error   { background: rgba(178,58,46,0.10); color: #8C1F1F; border-left: 3px solid #B23A2E; }
+
+    .card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .card-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+    }
+    .field { margin-bottom: 1.25rem; }
+    label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.4rem; }
+    label .required { color: var(--primary); margin-left: 2px; }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      color: var(--text);
+      background: #FAFAF8;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input[type="text"]:focus {
+      border-color: var(--color-moss);
+      box-shadow: 0 0 0 3px rgba(47,59,46,0.12);
+    }
+    .field-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem; }
+    .divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
+    .info-box {
+      background: rgba(200,161,90,0.12);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      color: var(--color-earth);
+      line-height: 1.5;
+    }
+    .actions { margin-top: 1.75rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .btn-primary {
+      width: 100%;
+      padding: 0.875rem;
+      background: var(--primary);
+      color: var(--primary-text);
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary:active { opacity: 0.9; transform: scale(0.98); }
+  </style>
+</head>
+<body>
+
+  <main>
+    <div class="welcome">
+      <h1>Bem-vindo{% if request.user.nome %}, {{ request.user.nome }}{% endif %}!</h1>
+      <p>Para começar, crie o seu estabelecimento. Você será vinculado a ele como administrador.</p>
+    </div>
+
+    {% if messages %}
+    <ul class="messages">
+      {% for msg in messages %}
+      <li class="msg {% if msg.tags == 'error' %}msg-error{% else %}msg-success{% endif %}">
+        {{ msg }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <div class="card">
+      <p class="card-title">Seu estabelecimento</p>
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="field">
+          <label for="nome">
+            Nome do estabelecimento
+            <span class="required" aria-hidden="true">*</span>
+          </label>
+          <input
+            type="text"
+            id="nome"
+            name="nome"
+            value="{{ request.POST.nome|default:'' }}"
+            placeholder="Ex.: Studio da Ana"
+            autocomplete="organization"
+            maxlength="255"
+            autofocus
+            required
+          />
+          <p class="field-hint">Máximo 255 caracteres.</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="info-box">
+          Depois de criado, você poderá vincular profissionais, registrar atendimentos e gerenciar tudo por aqui.
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn-primary">Criar e continuar</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+</body>
+</html>

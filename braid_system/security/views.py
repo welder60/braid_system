@@ -87,4 +87,12 @@ def google_callback(request):
     logger.info(
         "Login Google bem-sucedido: user=%s novo=%s", user.pk, user._state.adding
     )
+
+    # Primeiro acesso sem vínculo: envia para criar o estabelecimento.
+    # (Admin tem visão irrestrita e não precisa deste passo.)
+    from braid_system.core.views import _usuario_precisa_onboarding
+
+    if _usuario_precisa_onboarding(user):
+        return redirect("onboarding_estabelecimento")
+
     return redirect("gestao")
