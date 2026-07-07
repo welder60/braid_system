@@ -1,0 +1,394 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sobre — Braid System</title>
+  <link rel="icon" type="image/png" href="{% static 'core/img/logo.png' %}">
+  <style>
+    :root {
+      --color-moss:      #2F3B2E;
+      --color-forest:    #1E2A1F;
+      --color-terracota: #8C4A2F;
+      --color-earth:     #5A3A20;
+      --color-gold:      #C8A15A;
+      --color-sand:      #E7DAC1;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--color-sand);
+      color: var(--color-forest);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--color-moss);
+      color: var(--color-sand);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    header .header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    header .logo-icon {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .btn-back {
+      color: var(--color-sand);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.5rem 0.9rem;
+      border: 1.5px solid rgba(231,218,193,0.4);
+      border-radius: 8px;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .btn-back:hover {
+      background: rgba(231,218,193,0.12);
+      border-color: var(--color-gold);
+    }
+
+    /* ── Conteúdo ── */
+    main {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      padding: 2.5rem 1.25rem;
+    }
+    .content {
+      max-width: 720px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(30,42,31,0.10);
+      padding: 2.5rem 2.25rem;
+    }
+
+    /* ── Intro ── */
+    .intro {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.25rem;
+    }
+    .intro .hero-logo {
+      width: 96px;
+      height: 96px;
+      object-fit: contain;
+      border-radius: 18px;
+    }
+    .intro h2 {
+      font-size: 1.7rem;
+      font-weight: 700;
+      color: var(--color-forest);
+      line-height: 1.25;
+    }
+    .intro p {
+      font-size: 1rem;
+      color: var(--color-earth);
+      line-height: 1.7;
+      max-width: 520px;
+    }
+
+    /* ── Recursos ── */
+    .features h3,
+    .compass h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--color-forest);
+      margin-bottom: 1.25rem;
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.1rem;
+    }
+    .feature {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+    .feature .dot {
+      flex-shrink: 0;
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: var(--color-sand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-terracota);
+    }
+    .feature strong {
+      display: block;
+      font-size: 0.95rem;
+      color: var(--color-forest);
+      margin-bottom: 0.15rem;
+    }
+    .feature span {
+      font-size: 0.85rem;
+      color: var(--color-earth);
+      line-height: 1.5;
+    }
+
+    /* ── Braid Compass ── */
+    .compass {
+      background: linear-gradient(135deg, var(--color-moss), var(--color-forest));
+      color: var(--color-sand);
+    }
+    .compass h3 {
+      color: var(--color-gold);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .compass .tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-forest);
+      background: var(--color-gold);
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+    .compass p {
+      font-size: 0.97rem;
+      line-height: 1.7;
+      color: #e9e0cd;
+      margin-bottom: 1rem;
+    }
+    .compass ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      margin-bottom: 1.5rem;
+    }
+    .compass li {
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      color: #e9e0cd;
+    }
+    .compass li svg { flex-shrink: 0; color: var(--color-gold); margin-top: 2px; }
+    .btn-compass {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.85rem 1.75rem;
+      border-radius: 10px;
+      background: var(--color-gold);
+      color: var(--color-forest);
+      font-size: 0.97rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: filter 0.15s, transform 0.15s;
+    }
+    .btn-compass:hover { filter: brightness(1.06); transform: translateY(-1px); }
+
+    /* ── Redes sociais ── */
+    .social {
+      text-align: center;
+    }
+    .social h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--color-forest);
+      margin-bottom: 1.1rem;
+    }
+    .social-links {
+      display: flex;
+      justify-content: center;
+      gap: 0.9rem;
+      flex-wrap: wrap;
+    }
+    .social-links a {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      background: var(--color-sand);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-moss);
+      transition: background 0.15s, color 0.15s, transform 0.15s;
+    }
+    .social-links a:hover {
+      background: var(--color-moss);
+      color: var(--color-sand);
+      transform: translateY(-2px);
+    }
+
+    /* ── CTA login ── */
+    .cta {
+      text-align: center;
+    }
+    .cta a {
+      color: var(--color-terracota);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .cta a:hover { text-decoration: underline; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 1.25rem;
+      font-size: 0.8rem;
+      color: var(--color-earth);
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <img class="logo-icon" src="{% static 'core/img/logo.png' %}" alt="Braid System logo" />
+      <h1>Braid System</h1>
+    </div>
+    <a href="{% url 'home' %}" class="btn-back">← Voltar ao login</a>
+  </header>
+
+  <main>
+    <div class="content">
+
+      <!-- Intro -->
+      <section class="card intro">
+        <img class="hero-logo" src="{% static 'core/img/logo.png' %}" alt="Braid System logo" />
+        <h2>O que é o Braid System</h2>
+        <p>
+          O Braid System é uma plataforma de gestão feita para trancistas e estúdios de
+          tranças. Em um só lugar, você organiza atendimentos, clientes, custos e formas de
+          pagamento — e acompanha o desempenho do seu negócio com relatórios claros, sem
+          precisar de planilhas espalhadas.
+        </p>
+      </section>
+
+      <!-- Recursos -->
+      <section class="card features">
+        <h3>O que você faz por aqui</h3>
+        <div class="feature-grid">
+          <div class="feature">
+            <span class="dot">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </span>
+            <div><strong>Atendimentos</strong><span>Registre cada serviço com características, duração e valor.</span></div>
+          </div>
+          <div class="feature">
+            <span class="dot">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </span>
+            <div><strong>Clientes</strong><span>Mantenha o cadastro e o histórico de quem você atende.</span></div>
+          </div>
+          <div class="feature">
+            <span class="dot">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </span>
+            <div><strong>Custos</strong><span>Controle despesas e categorias para saber o que sobra.</span></div>
+          </div>
+          <div class="feature">
+            <span class="dot">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </span>
+            <div><strong>Relatórios</strong><span>Visualize faturamento, lucro e tendências do seu estúdio.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Braid Compass -->
+      <section class="card compass">
+        <span class="tag">Assessoria</span>
+        <h3>Braid Compass</h3>
+        <p>
+          Seus dados no Braid System contam uma história — e a <strong>Braid Compass</strong>
+          é a assessoria que a interpreta. Usamos as informações que você já registra na
+          plataforma para uma análise aprofundada do seu negócio, apontando onde está o lucro,
+          o que precisa de atenção e para onde crescer.
+        </p>
+        <ul>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Diagnóstico financeiro a partir dos seus atendimentos e custos reais.
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Identificação dos serviços e clientes mais rentáveis.
+          </li>
+          <li>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Recomendações práticas de precificação e crescimento.
+          </li>
+        </ul>
+        <a href="#" class="btn-compass">
+          Quero conhecer a Braid Compass
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+      </section>
+
+      <!-- Redes sociais -->
+      <section class="card social">
+        <h3>Acompanhe a gente</h3>
+        <div class="social-links">
+          <!-- URLs a serem preenchidas futuramente -->
+          <a href="#" aria-label="Instagram" title="Instagram">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          </a>
+          <a href="#" aria-label="Facebook" title="Facebook">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          </a>
+          <a href="#" aria-label="WhatsApp" title="WhatsApp">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>
+          </a>
+          <a href="#" aria-label="TikTok" title="TikTok">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>
+          </a>
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <div class="cta">
+        Já tem conta? <a href="{% url 'home' %}">Fazer login →</a>
+      </div>
+
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026 Braid System — Todos os direitos reservados
+  </footer>
+
+</body>
+</html>

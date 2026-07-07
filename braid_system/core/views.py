@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from functools import wraps
@@ -10,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.db import transaction
 from django.db.models import ProtectedError
+from django.utils.safestring import mark_safe
 from .models import (
     Estabelecimento,
     EstabelecimentoUsuario,
@@ -72,6 +74,11 @@ def home(request):
     return render(request, "core/home.html")
 
 
+def sobre(request):
+    """Página pública 'Sobre' — resumo do sistema e assessoria Braid Compass."""
+    return render(request, "core/sobre.html")
+
+
 def login_view(request):
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
@@ -95,6 +102,9 @@ def logout_view(request):
 
 @login_required
 def gestao(request):
+    # Usuário sem estabelecimento vinculado precisa criá-lo primeiro.
+    if _usuario_precisa_onboarding(request.user):
+        return redirect("onboarding_estabelecimento")
     return render(request, "core/gestao.html")
 
 
@@ -148,6 +158,58 @@ def cadastro_estabelecimento(request):
             messages.success(request, f'"{nome}" cadastrado com sucesso!')
             return redirect("cadastro_estabelecimento")
     return render(request, "core/cadastro_estabelecimento.html")
+
+
+def _usuario_precisa_onboarding(user):
+    """
+    True se o usuário deve passar pelo onboarding de estabelecimento.
+
+    Admin tem visão irrestrita (não precisa de vínculo). Os demais precisam
+    de pelo menos um vínculo em EstabelecimentoUsuario para operar o sistema.
+    """
+    if is_admin(user):
+        return False
+    return not EstabelecimentoUsuario.objects.filter(usuario=user).exists()
+
+
+@login_required
+def onboarding_estabelecimento(request):
+    """
+    Primeiro acesso: o usuário cria seu estabelecimento e é vinculado a ele
+    como administrador do estabelecimento (tipo_acesso='administrar').
+
+    Quem já possui vínculo (ou é admin do sistema) não precisa deste passo e
+    é redirecionado para a gestão.
+    """
+    if not _usuario_precisa_onboarding(request.user):
+        return redirect("gestao")
+
+    if request.method == "POST":
+        nome = request.POST.get("nome", "").strip()
+        if not nome:
+            messages.error(request, "Informe o nome do estabelecimento.")
+        else:
+            with transaction.atomic():
+                estabelecimento = Estabelecimento.objects.create(nome=nome)
+                EstabelecimentoUsuario.objects.create(
+                    estabelecimento=estabelecimento,
+                    usuario=request.user,
+                    tipo_acesso="administrar",
+                    incluido_por=request.user,
+                )
+            # Já deixa o novo estabelecimento como ativo na sessão.
+            request.session["estabelecimento_ativo_id"] = str(estabelecimento.pk)
+            logger.info(
+                "Onboarding: estabelecimento criado e vinculado. user=%s est=%s",
+                request.user.pk,
+                estabelecimento.pk,
+            )
+            messages.success(
+                request, f'"{nome}" criado com sucesso! Você já está vinculado a ele.'
+            )
+            return redirect("gestao")
+
+    return render(request, "core/onboarding_estabelecimento.html")
 
 
 # ── Estabelecimentos ───────────────────────────────────────────────────────────
@@ -938,6 +1000,7 @@ def _ctx_atendimentos(request, editando=None, mes=None, ano=None):
     formas_pagamento = FormaPagamento.objects.order_by("-padrao", "nome")
 
     # Atributos calculados para o formulario de edicao
+    edicao_json = None
     if editando is not None:
         editando.total_pago = sum(
             (p.valor for p in editando.pagamentos.all()),
@@ -949,6 +1012,34 @@ def _ctx_atendimentos(request, editando=None, mes=None, ano=None):
             else ""
         )
 
+        # Estado inicial para o wizard em modo edicao (consumido via JSON no template)
+        primeiro_pagamento = (
+            editando.pagamentos.all()[0] if editando.pagamentos.all() else None
+        )
+        opcoes_selecionadas = [
+            str(ac.opcao_id) for ac in editando.caracteristicas.all()
+        ]
+        custos_por_categoria = {}
+        for c in editando.custos.all():
+            if c.categoria_custo_id:
+                custos_por_categoria[str(c.categoria_custo_id)] = f"{c.valor:.2f}"
+
+        edicao_json = {
+            "pk": str(editando.pk),
+            "clienteId": str(editando.cliente_id) if editando.cliente_id else "",
+            "data": editando.data.strftime("%Y-%m-%d") if editando.data else "",
+            "hora": editando.hora.strftime("%H:%M") if editando.hora else "",
+            "duracao": editando.duracao_edit,
+            "pagamento": f"{editando.total_pago:.2f}" if editando.total_pago else "",
+            "formaPagamentoId": (
+                str(primeiro_pagamento.forma_pagamento_id)
+                if primeiro_pagamento and primeiro_pagamento.forma_pagamento_id
+                else ""
+            ),
+            "opcoes": opcoes_selecionadas,
+            "custos": custos_por_categoria,
+        }
+
     agora = datetime.now()
     return {
         "atendimentos": atendimentos_lista,
@@ -959,6 +1050,16 @@ def _ctx_atendimentos(request, editando=None, mes=None, ano=None):
         "formas_pagamento": formas_pagamento,
         "duracoes_sugeridas": duracoes_sugeridas,
         "editando": editando,
+        "edicao_json": (
+            mark_safe(
+                json.dumps(edicao_json)
+                .replace("<", "\\u003c")
+                .replace(">", "\\u003e")
+                .replace("&", "\\u0026")
+            )
+            if edicao_json
+            else ""
+        ),
         "hoje": agora.strftime("%Y-%m-%d"),
         "agora": agora.strftime("%H:%M"),
         "mes_ativo": mes,
@@ -993,12 +1094,15 @@ def atendimento_verificar(request):
         data_obj = datetime.strptime(data_str, "%Y-%m-%d").date()
     except ValueError:
         return JsonResponse({"duplicata": False})
-    duplicata = Atendimento.objects.filter(
+    qs = Atendimento.objects.filter(
         estabelecimento=estabelecimento,
         cliente_id=cliente_id,
         data=data_obj,
-    ).exists()
-    return JsonResponse({"duplicata": duplicata})
+    )
+    excluir_pk = request.GET.get("excluir_pk", "").strip()
+    if excluir_pk:
+        qs = qs.exclude(pk=excluir_pk)
+    return JsonResponse({"duplicata": qs.exists()})
 
 
 def atendimento_criar(request):
@@ -1162,11 +1266,16 @@ def atendimento_editar(request, pk):
         mes = int(request.POST.get("mes", mes))
         ano = int(request.POST.get("ano", ano))
         cliente_id = request.POST.get("cliente_id", "").strip()
+        novo_cliente = request.POST.get("novo_cliente", "").strip()
         data_val = request.POST.get("data", "").strip()
         hora_val = request.POST.get("hora", "").strip()
         duracao_val = request.POST.get("duracao", "").strip()
+        forma_pagamento_id = request.POST.get("forma_pagamento_id", "").strip()
+        opcoes_ids = request.POST.getlist("opcoes")
 
         erros = []
+        if not cliente_id and not novo_cliente:
+            erros.append("Informe o cliente do atendimento.")
         hora_obj = _parse_hora(hora_val)
         if not hora_obj:
             erros.append("A hora é obrigatória.")
@@ -1176,6 +1285,29 @@ def atendimento_editar(request, pk):
             data_obj = None
             erros.append("Data inválida.")
         pagamento_dec = _parse_dinheiro(request.POST.get("pagamento_valor", ""))
+        if pagamento_dec is None or pagamento_dec < 0:
+            pagamento_dec = None
+            erros.append("Informe o valor total recebido pelo serviço.")
+
+        # Data não pode ser futura
+        if data_obj and data_obj > datetime.today().date():
+            erros.append("Não é possível registrar atendimentos com data futura.")
+
+        # Mesmo cliente não pode ter outro atendimento na mesma data
+        if data_obj and cliente_id and not erros:
+            ja_atendido = (
+                Atendimento.objects.filter(
+                    estabelecimento=estabelecimento,
+                    cliente_id=cliente_id,
+                    data=data_obj,
+                )
+                .exclude(pk=atendimento.pk)
+                .exists()
+            )
+            if ja_atendido:
+                erros.append(
+                    "Este cliente já possui um atendimento registrado nesta data."
+                )
 
         if not erros:
             try:
@@ -1186,24 +1318,81 @@ def atendimento_editar(request, pk):
                             pk=cliente_id,
                             estabelecimento=estabelecimento,
                         )
+                    elif novo_cliente:
+                        atendimento.cliente = Cliente.objects.create(
+                            estabelecimento=estabelecimento,
+                            apelido=novo_cliente,
+                        )
                     atendimento.data = data_obj
                     atendimento.hora = hora_obj
                     atendimento.duracao = _duracao_para_minutos(duracao_val)
                     atendimento.save()
 
+                    # Pagamento: atualiza o existente (valor e forma) ou cria
+                    forma_pagamento = None
+                    if forma_pagamento_id:
+                        forma_pagamento = FormaPagamento.objects.filter(
+                            pk=forma_pagamento_id
+                        ).first()
                     if pagamento_dec is not None:
                         pagamento = atendimento.pagamentos.first()
                         if pagamento:
                             pagamento.valor = pagamento_dec
+                            pagamento.forma_pagamento = forma_pagamento
                             pagamento.save()
                         else:
                             Pagamento.objects.create(
                                 atendimento=atendimento,
-                                forma_pagamento=None,
+                                forma_pagamento=forma_pagamento,
                                 valor=pagamento_dec,
                             )
+
+                    # Caracteristicas: substitui o conjunto pelo enviado
+                    atendimento.caracteristicas.all().delete()
+                    opcoes = CaracteristicaAtendimentoOpcao.objects.filter(
+                        pk__in=opcoes_ids
+                    )
+                    for opcao in opcoes:
+                        AtendimentoCaracteristica.objects.get_or_create(
+                            atendimento=atendimento,
+                            opcao=opcao,
+                        )
+
+                    # Custos vinculados: sincroniza por categoria a partir do POST
+                    for chave, bruto in request.POST.items():
+                        if not chave.startswith("custo_"):
+                            continue
+                        cat_id = chave[len("custo_") :]
+                        categoria = CategoriaCusto.objects.filter(
+                            pk=cat_id,
+                            vinculado_atendimento=True,
+                        ).first()
+                        if not categoria:
+                            continue
+                        valor_custo = _parse_dinheiro(bruto)
+                        existente = atendimento.custos.filter(
+                            categoria_custo=categoria
+                        ).first()
+                        if valor_custo is None or valor_custo <= 0:
+                            # Custo zerado/removido: apaga o vínculo existente
+                            if existente:
+                                existente.delete()
+                            continue
+                        if existente:
+                            existente.valor = valor_custo
+                            existente.data = data_obj
+                            existente.save()
+                        else:
+                            Custo.objects.create(
+                                estabelecimento=estabelecimento,
+                                categoria_custo=categoria,
+                                atendimento=atendimento,
+                                descricao=categoria.nome,
+                                data=data_obj,
+                                valor=valor_custo,
+                            )
                 messages.success(request, "Atendimento atualizado.")
-                return redirect("atendimentos")
+                return redirect(f"/atendimentos/?mes={mes or ''}&ano={ano or ''}")
             except Exception as exc:  # noqa: BLE001
                 logger.exception(
                     "Erro ao editar atendimento: pk=%s user=%s", pk, request.user.pk
@@ -2516,27 +2705,10 @@ def consultor_dashboard_caracteristicas(request):
     atendimentos, duração média, lucro/atend., lucro/hora)."""
     import calendar
     from datetime import date as date_cls
-    from django.db.models import Sum, Count
 
-    ctx = _get_consultor_context_base(request)
-    estabelecimento = ctx["estabelecimento_ativo"]
+    _get_consultor_context_base(request)
 
     hoje = date_cls.today()
-    MESES_PT_FULL = [
-        "",
-        "Janeiro",
-        "Fevereiro",
-        "Março",
-        "Abril",
-        "Maio",
-        "Junho",
-        "Julho",
-        "Agosto",
-        "Setembro",
-        "Outubro",
-        "Novembro",
-        "Dezembro",
-    ]
 
     # ── Período ──────────────────────────────────────────────────────────────
     try:
@@ -2566,155 +2738,3 @@ def consultor_dashboard_caracteristicas(request):
 
     # ── Filtros de características ────────────────────────────────────────────
     # GET: opcoes_<uuid_caracteristica> = [lista de UUIDs de opcoes selecionadas]
-    caracteristicas_list = list(
-        CaracteristicaAtendimento.objects.prefetch_related("opcoes").order_by("ordem")
-    )
-
-    filtros_car = {}  # {caracteristica_pk (str): [opcao_pk (str), ...]}
-    for car in caracteristicas_list:
-        key = f"opcoes_{car.pk}"
-        selecionadas = request.GET.getlist(key)
-        if selecionadas:
-            filtros_car[str(car.pk)] = selecionadas
-
-    anos_disponiveis = []
-    kpi = {
-        "lucro": _fmt_money_br(Decimal("0")),
-        "lucro_positivo": True,
-        "faturado": _fmt_money_br(Decimal("0")),
-        "atendimentos": 0,
-        "custos": _fmt_money_br(Decimal("0")),
-        "custo_medio_atend": None,
-        "custos_individuais": _fmt_money_br(Decimal("0")),
-        "tem_custos_individuais": False,
-        "duracao_media": None,
-        "lucro_por_atend": None,
-        "lucro_por_hora": None,
-    }
-
-    if estabelecimento:
-        anos_set = set()
-        for d in Atendimento.objects.filter(estabelecimento=estabelecimento).dates(
-            "data", "year"
-        ):
-            anos_set.add(d.year)
-        anos_set.add(hoje.year)
-        anos_disponiveis = sorted(anos_set)
-
-        # Base QS filtrada por estabelecimento e período
-        qs = Atendimento.objects.filter(
-            estabelecimento=estabelecimento,
-            data__gte=data_ini,
-            data__lte=data_fim,
-        )
-
-        # Aplica filtro de características (AND entre características, OR entre opções da mesma)
-        for car_pk, opcao_pks in filtros_car.items():
-            qs = qs.filter(caracteristicas__opcao_id__in=opcao_pks)
-
-        qs = qs.distinct()
-
-        # Agrega
-        agg = qs.aggregate(qtd=Count("id"), minutos=Sum("duracao"))
-        total_atend = agg["qtd"] or 0
-        total_min = agg["minutos"] or 0
-
-        faturado = (
-            Pagamento.objects.filter(atendimento__in=qs).aggregate(s=Sum("valor"))["s"]
-        ) or Decimal("0")
-
-        # ── Custos estimados ─────────────────────────────────────────────────
-        # O custo individual por atendimento normalmente não é informado, então
-        # é estimado: rateia-se os custos gerais (não vinculados a um atendimento)
-        # do período pela quantidade TOTAL de atendimentos do período, obtendo o
-        # custo médio por atendimento. Esse custo médio é multiplicado pela
-        # quantidade de atendimentos encontrados pelo filtro e, em seguida, são
-        # somados os custos individuais (vinculados) dos atendimentos filtrados.
-        # Assim o custo (e o lucro) refletem apenas o subconjunto filtrado.
-        custos_gerais = (
-            Custo.objects.filter(
-                estabelecimento=estabelecimento,
-                data__gte=data_ini,
-                data__lte=data_fim,
-                atendimento__isnull=True,
-            ).aggregate(s=Sum("valor"))["s"]
-        ) or Decimal("0")
-
-        total_atend_periodo = Atendimento.objects.filter(
-            estabelecimento=estabelecimento,
-            data__gte=data_ini,
-            data__lte=data_fim,
-        ).count()
-
-        custo_medio_atend = (
-            (custos_gerais / total_atend_periodo)
-            if total_atend_periodo
-            else Decimal("0")
-        )
-
-        # Custos individuais (vinculados) dos atendimentos efetivamente filtrados
-        custos_individuais = (
-            Custo.objects.filter(
-                estabelecimento=estabelecimento, atendimento__in=qs
-            ).aggregate(s=Sum("valor"))["s"]
-        ) or Decimal("0")
-
-        custos_total = (custo_medio_atend * total_atend) + custos_individuais
-
-        lucro = faturado - custos_total
-        horas_dec = (Decimal(total_min) / Decimal(60)) if total_min else Decimal("0")
-        lucro_por_atend = (lucro / total_atend) if total_atend else None
-        lucro_por_hora = (lucro / horas_dec) if horas_dec else None
-        duracao_media_min = round(total_min / total_atend) if total_atend else None
-
-        kpi = {
-            "lucro": _fmt_money_br(lucro),
-            "lucro_positivo": lucro >= 0,
-            "faturado": _fmt_money_br(faturado),
-            "atendimentos": total_atend,
-            "custos": _fmt_money_br(custos_total),
-            "custo_medio_atend": _fmt_money_br(custo_medio_atend)
-            if total_atend_periodo
-            else None,
-            "custos_individuais": _fmt_money_br(custos_individuais),
-            "tem_custos_individuais": custos_individuais > 0,
-            "duracao_media": _fmt_horas_br(duracao_media_min)
-            if duracao_media_min is not None
-            else None,
-            "lucro_por_atend": _fmt_money_br(lucro_por_atend)
-            if lucro_por_atend is not None
-            else None,
-            "lucro_por_hora": _fmt_money_br(lucro_por_hora)
-            if lucro_por_hora is not None
-            else None,
-        }
-
-    import json
-
-    # Para o template: set flat de UUIDs selecionados (facilita is-checked)
-    opcoes_selecionadas = set()
-    for pks in filtros_car.values():
-        opcoes_selecionadas.update(pks)
-
-    # Para o JS: dict com chaves "opcoes_<car_pk>" → [lista de opcao_pks]
-    filtros_car_json = json.dumps({f"opcoes_{k}": v for k, v in filtros_car.items()})
-
-    ctx.update(
-        {
-            "kpi": kpi,
-            "caracteristicas_list": caracteristicas_list,
-            "filtros_car": filtros_car,
-            "filtros_car_json": filtros_car_json,
-            "opcoes_selecionadas": opcoes_selecionadas,
-            "anos_disponiveis": anos_disponiveis,
-            "meses": [(i, MESES_PT_FULL[i]) for i in range(1, 13)],
-            "ano_ini": ano_ini,
-            "mes_ini": mes_ini,
-            "ano_fim": ano_fim,
-            "mes_fim": mes_fim,
-            "data_ini": data_ini,
-            "data_fim": data_fim,
-            "filtros_ativos": bool(filtros_car),
-        }
-    )
-    return render(request, "core/consultor_dashboard_caracteristicas.html", ctx)
