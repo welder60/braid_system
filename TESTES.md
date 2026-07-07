@@ -3,6 +3,33 @@
 Suíte de testes automatizados do app `core` e do app `security`, usando o
 test runner nativo do Django (`unittest` / `TestCase`).
 
+## Organização
+
+Os testes vivem no pacote `braid_system/core/tests/`, separados por domínio:
+
+| Módulo                  | Conteúdo                                         |
+| ----------------------- | ------------------------------------------------ |
+| `utils.py`              | helpers de criação e mixins compartilhados       |
+| `test_helpers.py`       | funções utilitárias puras de `views.py`          |
+| `test_models.py`        | modelos, managers e regras `on_delete`           |
+| `test_access.py`        | autorização centralizada e context processor     |
+| `test_urls.py`          | `reverse`/`resolve` das rotas nomeadas           |
+| `test_auth.py`          | login/logout, proteção de rotas, home e perfil   |
+| `test_admin_views.py`   | CRUDs do painel administrativo                   |
+| `test_atendimentos.py`  | fluxo completo de atendimentos e validações      |
+| `test_clientes.py`      | CRUD de clientes (multi-tenant)                  |
+| `test_custos.py`        | CRUD de custos avulsos                           |
+| `test_relatorios.py`    | relatórios da gestão com movimento real          |
+| `test_render_edicao.py` | GET dos formulários de edição                    |
+| `test_isolamento.py`    | isolamento de dados entre estabelecimentos       |
+| `test_onboarding.py`    | criação do primeiro estabelecimento              |
+| `test_consultor.py`     | painel do consultor e exportações CSV            |
+| `test_security.py`      | login social com Google (OAuth2/OIDC, com mocks) |
+
+Durante os testes, `settings.py` troca o hasher de senha por `MD5PasswordHasher`
+(prática recomendada pela documentação do Django), o que reduziu o tempo da
+suíte de minutos para poucos segundos.
+
 ## Como rodar
 
 ```bash
@@ -25,11 +52,12 @@ coverage report          # resumo no terminal
 coverage html            # relatório navegável em htmlcov/index.html
 ```
 
-Resultado atual: **122 testes**, **90,6%** de cobertura do código de produção
-(modelos, context processor, URLs e o app `security` em 100%).
+Resultado atual: **252 testes**, **97,8%** de cobertura do código de produção
+(modelos, `access.py`, context processor, URLs e o app `security` — incluindo
+o fluxo OAuth do Google — em 100%; `core/views.py` em 97,5%).
 
 A configuração (`.coveragerc`) mede `branch coverage` e exclui migrations,
-o próprio arquivo de testes, settings e o módulo morto
+o pacote de testes, settings e o módulo morto
 `braid_system/core/models/usuario.py` (ver abaixo).
 
 ## O que é coberto
@@ -63,6 +91,15 @@ o próprio arquivo de testes, settings e o módulo morto
 3. **`custos()` quebrava com `?mes=&ano=` vazios** (`int('')` →
    `ValueError`) — justamente o que `custo_criar` gerava ao redirecionar.
    Endurecido para tratar valores vazios.
+
+## Pendência conhecida (não coberta)
+
+A view `consultor_dashboard_caracteristicas` (final de `core/views.py`,
+linhas 2706+) está **incompleta no código-fonte**: a função termina no meio
+da implementação (após o cálculo do período) e não retorna `HttpResponse`.
+Acessar `/consultor/dashboard-caracteristicas/` gera erro 500. Por isso ela
+está fora da cobertura — ao concluir a view, adicionar os testes em
+`tests/test_consultor.py`.
 
 ## Observação — código morto
 

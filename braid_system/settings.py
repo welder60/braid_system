@@ -15,6 +15,7 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 
 import logging
 import os
+import sys
 from pathlib import Path
 
 from django.core.management.utils import get_random_secret_key
@@ -183,6 +184,12 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
+
+# Durante os testes, usa um hasher de senha rápido: o PBKDF2 (padrão) torna a
+# suíte MUITO mais lenta sem ganho algum de segurança em ambiente de teste.
+# Prática recomendada na documentação oficial do Django ("Speeding up tests").
+if len(sys.argv) > 1 and sys.argv[1] == "test":
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 
 # --------------------------------------------------------------------------- #

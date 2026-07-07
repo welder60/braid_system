@@ -4,6 +4,8 @@ source = braid_system
 omit =
     */migrations/*
     */tests.py
+    */tests/*
+    */tests_*.py
     */__pycache__/*
     braid_system/wsgi.py
     braid_system/asgi.py
