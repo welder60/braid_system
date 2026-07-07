@@ -1013,7 +1013,9 @@ def _ctx_atendimentos(request, editando=None, mes=None, ano=None):
         )
 
         # Estado inicial para o wizard em modo edicao (consumido via JSON no template)
-        primeiro_pagamento = editando.pagamentos.all()[0] if editando.pagamentos.all() else None
+        primeiro_pagamento = (
+            editando.pagamentos.all()[0] if editando.pagamentos.all() else None
+        )
         opcoes_selecionadas = [
             str(ac.opcao_id) for ac in editando.caracteristicas.all()
         ]
@@ -2703,27 +2705,10 @@ def consultor_dashboard_caracteristicas(request):
     atendimentos, duração média, lucro/atend., lucro/hora)."""
     import calendar
     from datetime import date as date_cls
-    from django.db.models import Sum, Count
 
-    ctx = _get_consultor_context_base(request)
-    estabelecimento = ctx["estabelecimento_ativo"]
+    _get_consultor_context_base(request)
 
     hoje = date_cls.today()
-    MESES_PT_FULL = [
-        "",
-        "Janeiro",
-        "Fevereiro",
-        "Março",
-        "Abril",
-        "Maio",
-        "Junho",
-        "Julho",
-        "Agosto",
-        "Setembro",
-        "Outubro",
-        "Novembro",
-        "Dezembro",
-    ]
 
     # ── Período ──────────────────────────────────────────────────────────────
     try:
@@ -2753,155 +2738,3 @@ def consultor_dashboard_caracteristicas(request):
 
     # ── Filtros de características ────────────────────────────────────────────
     # GET: opcoes_<uuid_caracteristica> = [lista de UUIDs de opcoes selecionadas]
-    caracteristicas_list = list(
-        CaracteristicaAtendimento.objects.prefetch_related("opcoes").order_by("ordem")
-    )
-
-    filtros_car = {}  # {caracteristica_pk (str): [opcao_pk (str), ...]}
-    for car in caracteristicas_list:
-        key = f"opcoes_{car.pk}"
-        selecionadas = request.GET.getlist(key)
-        if selecionadas:
-            filtros_car[str(car.pk)] = selecionadas
-
-    anos_disponiveis = []
-    kpi = {
-        "lucro": _fmt_money_br(Decimal("0")),
-        "lucro_positivo": True,
-        "faturado": _fmt_money_br(Decimal("0")),
-        "atendimentos": 0,
-        "custos": _fmt_money_br(Decimal("0")),
-        "custo_medio_atend": None,
-        "custos_individuais": _fmt_money_br(Decimal("0")),
-        "tem_custos_individuais": False,
-        "duracao_media": None,
-        "lucro_por_atend": None,
-        "lucro_por_hora": None,
-    }
-
-    if estabelecimento:
-        anos_set = set()
-        for d in Atendimento.objects.filter(estabelecimento=estabelecimento).dates(
-            "data", "year"
-        ):
-            anos_set.add(d.year)
-        anos_set.add(hoje.year)
-        anos_disponiveis = sorted(anos_set)
-
-        # Base QS filtrada por estabelecimento e período
-        qs = Atendimento.objects.filter(
-            estabelecimento=estabelecimento,
-            data__gte=data_ini,
-            data__lte=data_fim,
-        )
-
-        # Aplica filtro de características (AND entre características, OR entre opções da mesma)
-        for car_pk, opcao_pks in filtros_car.items():
-            qs = qs.filter(caracteristicas__opcao_id__in=opcao_pks)
-
-        qs = qs.distinct()
-
-        # Agrega
-        agg = qs.aggregate(qtd=Count("id"), minutos=Sum("duracao"))
-        total_atend = agg["qtd"] or 0
-        total_min = agg["minutos"] or 0
-
-        faturado = (
-            Pagamento.objects.filter(atendimento__in=qs).aggregate(s=Sum("valor"))["s"]
-        ) or Decimal("0")
-
-        # ── Custos estimados ─────────────────────────────────────────────────
-        # O custo individual por atendimento normalmente não é informado, então
-        # é estimado: rateia-se os custos gerais (não vinculados a um atendimento)
-        # do período pela quantidade TOTAL de atendimentos do período, obtendo o
-        # custo médio por atendimento. Esse custo médio é multiplicado pela
-        # quantidade de atendimentos encontrados pelo filtro e, em seguida, são
-        # somados os custos individuais (vinculados) dos atendimentos filtrados.
-        # Assim o custo (e o lucro) refletem apenas o subconjunto filtrado.
-        custos_gerais = (
-            Custo.objects.filter(
-                estabelecimento=estabelecimento,
-                data__gte=data_ini,
-                data__lte=data_fim,
-                atendimento__isnull=True,
-            ).aggregate(s=Sum("valor"))["s"]
-        ) or Decimal("0")
-
-        total_atend_periodo = Atendimento.objects.filter(
-            estabelecimento=estabelecimento,
-            data__gte=data_ini,
-            data__lte=data_fim,
-        ).count()
-
-        custo_medio_atend = (
-            (custos_gerais / total_atend_periodo)
-            if total_atend_periodo
-            else Decimal("0")
-        )
-
-        # Custos individuais (vinculados) dos atendimentos efetivamente filtrados
-        custos_individuais = (
-            Custo.objects.filter(
-                estabelecimento=estabelecimento, atendimento__in=qs
-            ).aggregate(s=Sum("valor"))["s"]
-        ) or Decimal("0")
-
-        custos_total = (custo_medio_atend * total_atend) + custos_individuais
-
-        lucro = faturado - custos_total
-        horas_dec = (Decimal(total_min) / Decimal(60)) if total_min else Decimal("0")
-        lucro_por_atend = (lucro / total_atend) if total_atend else None
-        lucro_por_hora = (lucro / horas_dec) if horas_dec else None
-        duracao_media_min = round(total_min / total_atend) if total_atend else None
-
-        kpi = {
-            "lucro": _fmt_money_br(lucro),
-            "lucro_positivo": lucro >= 0,
-            "faturado": _fmt_money_br(faturado),
-            "atendimentos": total_atend,
-            "custos": _fmt_money_br(custos_total),
-            "custo_medio_atend": _fmt_money_br(custo_medio_atend)
-            if total_atend_periodo
-            else None,
-            "custos_individuais": _fmt_money_br(custos_individuais),
-            "tem_custos_individuais": custos_individuais > 0,
-            "duracao_media": _fmt_horas_br(duracao_media_min)
-            if duracao_media_min is not None
-            else None,
-            "lucro_por_atend": _fmt_money_br(lucro_por_atend)
-            if lucro_por_atend is not None
-            else None,
-            "lucro_por_hora": _fmt_money_br(lucro_por_hora)
-            if lucro_por_hora is not None
-            else None,
-        }
-
-    import json
-
-    # Para o template: set flat de UUIDs selecionados (facilita is-checked)
-    opcoes_selecionadas = set()
-    for pks in filtros_car.values():
-        opcoes_selecionadas.update(pks)
-
-    # Para o JS: dict com chaves "opcoes_<car_pk>" → [lista de opcao_pks]
-    filtros_car_json = json.dumps({f"opcoes_{k}": v for k, v in filtros_car.items()})
-
-    ctx.update(
-        {
-            "kpi": kpi,
-            "caracteristicas_list": caracteristicas_list,
-            "filtros_car": filtros_car,
-            "filtros_car_json": filtros_car_json,
-            "opcoes_selecionadas": opcoes_selecionadas,
-            "anos_disponiveis": anos_disponiveis,
-            "meses": [(i, MESES_PT_FULL[i]) for i in range(1, 13)],
-            "ano_ini": ano_ini,
-            "mes_ini": mes_ini,
-            "ano_fim": ano_fim,
-            "mes_fim": mes_fim,
-            "data_ini": data_ini,
-            "data_fim": data_fim,
-            "filtros_ativos": bool(filtros_car),
-        }
-    )
-    return render(request, "core/consultor_dashboard_caracteristicas.html", ctx)

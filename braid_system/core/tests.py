@@ -432,9 +432,7 @@ class AuthFlowTests(TestCase):
             reverse("login"), {"username": self.user.email, "password": self.senha}
         )
         # Login leva a gestao; usuario sem vinculo e encaminhado ao onboarding.
-        self.assertRedirects(
-            resp, reverse("gestao"), target_status_code=302
-        )
+        self.assertRedirects(resp, reverse("gestao"), target_status_code=302)
         self.assertEqual(int(self.client.session["_auth_user_id"] != ""), 1)
 
     def test_login_invalido(self):
@@ -1464,7 +1462,9 @@ class OnboardingEstabelecimentoTests(TestCase):
         self.assertRedirects(resp, reverse("gestao"))
 
     def test_gestao_redireciona_usuario_sem_vinculo_para_onboarding(self):
-        self.client.force_login(criar_usuario(email="semvinc@b.com", tipo="profissional"))
+        self.client.force_login(
+            criar_usuario(email="semvinc@b.com", tipo="profissional")
+        )
         resp = self.client.get(reverse("gestao"))
         self.assertRedirects(resp, reverse("onboarding_estabelecimento"))
 
