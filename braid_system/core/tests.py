@@ -1000,13 +1000,14 @@ class AtendimentoViewTests(AutenticadoComEstabelecimentoMixin, TestCase):
         resp = self.client.post(
             reverse("atendimento_editar", args=[at.pk]),
             {
+                "cliente_id": str(at.cliente_id),
                 "data": "2026-07-01",
                 "hora": "10:00",
                 "duracao": "01:15",
                 "pagamento_valor": "180",
             },
         )
-        self.assertRedirects(resp, reverse("atendimentos"))
+        self.assertRedirects(resp, reverse("atendimentos") + "?mes=6&ano=2026")
         at.refresh_from_db()
         self.assertEqual(at.data, date(2026, 7, 1))
         self.assertEqual(at.duracao, 75)
@@ -1316,14 +1317,24 @@ class AdminPainelAcessoTests(TestCase):
                 self.assertRedirects(self.client.get(reverse(nome)), reverse("home"))
 
     def test_profissional_redireciona_para_gestao(self):
-        self.client.force_login(criar_usuario(email="pro2@b.com", tipo="profissional"))
+        user = criar_usuario(email="pro2@b.com", tipo="profissional")
+        # Vincula a um estabelecimento para que /gestao/ resolva (200) e nao
+        # dispare o redirecionamento de onboarding ao seguir o redirect.
+        EstabelecimentoUsuario.objects.create(
+            estabelecimento=criar_estabelecimento("Est Pro2"), usuario=user
+        )
+        self.client.force_login(user)
         for nome in self.ROTAS:
             with self.subTest(rota=nome):
                 self.assertRedirects(self.client.get(reverse(nome)), reverse("gestao"))
 
     def test_consultor_nao_e_admin(self):
         # Decisao do time: 'consultor' NAO bypassa a restricao de estabelecimentos.
-        self.client.force_login(criar_usuario(email="cons@b.com", tipo="consultor"))
+        user = criar_usuario(email="cons@b.com", tipo="consultor")
+        EstabelecimentoUsuario.objects.create(
+            estabelecimento=criar_estabelecimento("Est Cons"), usuario=user
+        )
+        self.client.force_login(user)
         self.assertRedirects(
             self.client.get(reverse("estabelecimentos")), reverse("gestao")
         )
